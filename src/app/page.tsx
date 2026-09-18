@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
@@ -63,7 +64,20 @@ export default async function Home() {
     <main className={styles.screen}>
       <header className={styles.head}>
         <p className={styles.name}>{child.name}</p>
-        <span className={styles.date}>{dateLabel}</span>
+        <div className={styles.headRight}>
+          <span className={styles.date}>{dateLabel}</span>
+          <Link href="/settings" className={styles.gear} aria-label="Настройки">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+              <path
+                d="M12 3.6v2M12 18.4v2M3.6 12h2M18.4 12h2M6.1 6.1l1.4 1.4M16.5 16.5l1.4 1.4M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </Link>
+        </div>
       </header>
 
       <div className={styles.center}>
@@ -74,7 +88,7 @@ export default async function Home() {
       </div>
 
       {todayRows.length > 0 ? (
-        <section className={styles.totals} aria-label="Итоги за сегодня">
+        <Link href="/day" className={styles.totals} aria-label="Открыть дневник за сегодня">
           <div className={styles.total}>
             <span className={styles.totalValue}>{formatDuration(totals.daySleep)}</span>
             <span className={styles.totalLabel}>дневной</span>
@@ -89,9 +103,11 @@ export default async function Home() {
               {totals.napCount === 1 ? 'сон днём' : 'снов днём'}
             </span>
           </div>
-        </section>
+        </Link>
       ) : (
-        <p className={styles.empty}>Сегодня записей пока нет</p>
+        <Link href="/day" className={styles.empty}>
+          Записей пока нет — добавить вручную
+        </Link>
       )}
     </main>
   );

@@ -1,0 +1,34 @@
+.screen { padding: 14px 16px 36px; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+.head { display: flex; align-items: center; gap: 6px; }
+.head h1 { font-size: 19px; font-weight: 600; margin: 0; }
+.back {
+  font-size: 30px; line-height: 1; text-decoration: none; color: var(--text-muted);
+  width: 40px; height: 40px; display: grid; place-items: center; flex: none;
+}
+
+.block { display: flex; flex-direction: column; gap: 10px; }
+.block h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.hint { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+
+.times { display: flex; gap: 10px; }
+.field { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field span { font-size: 13px; color: var(--text-muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: var(--tap); padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--text-muted); font-size: 14px;
+}
+.chipOn { border-color: var(--sleep); background: var(--sleep); color: var(--sleep-ink); }
+
+.error { color: #C0463A; font-size: 14px; margin: 0; }
+.saved { color: var(--text-muted); font-size: 14px; margin: 0; }
+
+.submit {
+  min-height: var(--tap); border-radius: var(--radius);
+  background: var(--sleep); color: var(--sleep-ink);
+  font-size: 16px; font-weight: 500;
+}
+.submit:disabled { opacity: 0.6; cursor: default; }

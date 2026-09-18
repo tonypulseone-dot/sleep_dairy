@@ -17,6 +17,12 @@
   --wake: #C8811F;       /* разбудить — тёплый янтарь, цвет утра */
   --wake-ink: #FFFFFF;
 
+  /* Цвета дневника: жёлтым дневные сны, синим ночной — требование Виктории. */
+  --nap-bg: #FAEBCE;
+  --nap-ink: #6E4A0C;
+  --night-bg: #DCE5F6;
+  --night-ink: #2A4477;
+
   --radius: 18px;
   --tap: 56px;           /* меньше этого пальцем в темноте не попасть */
   --font: "Golos Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -33,6 +39,11 @@
   --sleep-ink: #F2F5FC;
   --wake: #D8A253;
   --wake-ink: #1A1206;
+
+  --nap-bg: #3A2C11;
+  --nap-ink: #E7BE79;
+  --night-bg: #1B2540;
+  --night-ink: #9DB6E4;
 }
 
 * { box-sizing: border-box; }

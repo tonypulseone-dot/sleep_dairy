@@ -3,9 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { children, sleeps } from '@/db/schema';
+import { children, parents, sleeps } from '@/db/schema';
 import { currentChild, currentParent } from '@/lib/session';
-import { sleepDayOf, sleepKindOf, type DayWindow } from '@/lib/sleep-day';
+import {
+  composeSleep,
+  parseTimeOfDay,
+  sleepDayOf,
+  sleepKindOf,
+  type DayWindow,
+} from '@/lib/sleep-day';
 
 /** Насколько назад разрешено сдвинуть отметку: «заметила не сразу». */
 const MAX_OFFSET_MINUTES = 60;
@@ -112,4 +118,131 @@ export async function createChild(input: OnboardingInput) {
 
   revalidatePath('/');
   return created.id;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ручной ввод и правка. Виктория: мама часто не успевает засечь время,
+ * а иногда приходит с дневником за неделю назад.
+ * ------------------------------------------------------------------ */
+
+async function ownedSleep(sleepId: string, childId: string) {
+  const [row] = await db.select().from(sleeps).where(eq(sleeps.id, sleepId)).limit(1);
+  // Чужую запись правит только тот, у кого есть id: проверяем принадлежность.
+  if (!row || row.childId !== childId) throw new Error('Запись не найдена');
+  return row;
+}
+
+export interface SleepInput {
+  /** Сонные сутки, к которым мама относит сон. */
+  sleepDay: string;
+  /** Время в формате 14:00. */
+  start: string;
+  end: string;
+}
+
+function build(input: SleepInput, window: DayWindow) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sleepDay)) throw new Error('Не выбрана дата');
+  const startMinutes = parseTimeOfDay(input.start);
+  const endMinutes = parseTimeOfDay(input.end);
+  const { startedAt, endedAt } = composeSleep(input.sleepDay, startMinutes, endMinutes, window);
+
+  const minutes = (endedAt.getTime() - startedAt.getTime()) / 60_000;
+  if (minutes < 1) throw new Error('Сон короче минуты');
+  if (minutes > 20 * 60) throw new Error('Сон длиннее двадцати часов — проверьте время');
+
+  return {
+    startedAt,
+    endedAt,
+    sleepDay: sleepDayOf(startedAt, window),
+    kind: sleepKindOf(startedAt, window),
+  };
+}
+
+export async function addSleepManual(input: SleepInput) {
+  const { child, window } = await requireContext();
+  await db.insert(sleeps).values({ childId: child.id, source: 'manual', ...build(input, window) });
+  revalidatePath('/');
+  revalidatePath('/day');
+}
+
+export async function updateSleep(sleepId: string, input: SleepInput) {
+  const { child, window } = await requireContext();
+  await ownedSleep(sleepId, child.id);
+  await db
+    .update(sleeps)
+    .set({ ...build(input, window), updatedAt: new Date() })
+    .where(eq(sleeps.id, sleepId));
+  revalidatePath('/');
+  revalidatePath('/day');
+}
+
+export async function deleteSleep(sleepId: string) {
+  const { child } = await requireContext();
+  await ownedSleep(sleepId, child.id);
+  await db.delete(sleeps).where(eq(sleeps.id, sleepId));
+  revalidatePath('/');
+  revalidatePath('/day');
+}
+
+/* ------------------------------------------------------------------ *
+ * Настройки суток
+ * ------------------------------------------------------------------ */
+
+export async function updateDayWindow(input: {
+  dayBoundary: string;
+  nightFrom: string;
+  timeZone: string;
+}) {
+  const { parent, child } = await requireContext();
+
+  const dayBoundary = parseTimeOfDay(input.dayBoundary);
+  const nightFrom = parseTimeOfDay(input.nightFrom);
+  if (nightFrom <= dayBoundary) {
+    throw new Error('Ночь должна начинаться позже, чем утро');
+  }
+  // Проверяем, что зона вообще существует: иначе весь расчёт суток развалится.
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: input.timeZone });
+  } catch {
+    throw new Error('Неизвестный часовой пояс');
+  }
+
+  await db
+    .update(children)
+    .set({ dayBoundaryMinutes: dayBoundary, nightFromMinutes: nightFrom })
+    .where(eq(children.id, child.id));
+
+  if (input.timeZone !== parent.timeZone) {
+    await db.update(parents).set({ timeZone: input.timeZone }).where(eq(parents.id, parent.id));
+  }
+
+  // Границы поменялись — прежние sleep_day и kind могли устареть.
+  await recomputeSleepDays(child.id, {
+    dayBoundary,
+    nightFrom,
+    timeZone: input.timeZone,
+  });
+
+  revalidatePath('/', 'layout');
+}
+
+/**
+ * Пересчитывает принадлежность снов к суткам после смены границ.
+ * Без этого таблица консультанта показывала бы старую разбивку.
+ */
+async function recomputeSleepDays(childId: string, window: DayWindow) {
+  const rows = await db.select().from(sleeps).where(eq(sleeps.childId, childId));
+  for (const row of rows) {
+    const sleepDay = sleepDayOf(row.startedAt, window);
+    const kind = sleepKindOf(row.startedAt, window);
+    if (sleepDay !== row.sleepDay || kind !== row.kind) {
+      await db.update(sleeps).set({ sleepDay, kind }).where(eq(sleeps.id, row.id));
+    }
+  }
+}
+
+export async function setThemePref(pref: 'auto' | 'light' | 'dark') {
+  const { parent } = await requireContext();
+  await db.update(parents).set({ themePref: pref }).where(eq(parents.id, parent.id));
+  revalidatePath('/', 'layout');
 }

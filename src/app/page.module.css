@@ -62,3 +62,17 @@
 }
 .gate h1 { font-size: 22px; font-weight: 600; margin: 0; }
 .gate p { color: var(--text-muted); margin: 0; max-width: 32ch; }
+
+.headRight { display: flex; align-items: center; gap: 6px; }
+
+.gear {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-right: -10px;
+}
+
+/* Блок итогов ведёт в дневник — отдельной кнопки для этого не нужно. */
+.totals { text-decoration: none; color: inherit; }
+.empty { text-decoration: none; display: block; }

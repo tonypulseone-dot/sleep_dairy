@@ -1,0 +1,136 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { setThemePref, updateDayWindow } from '@/app/actions';
+import styles from './SettingsForm.module.css';
+
+/** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
+const ZONES = [
+  ['Europe/Kaliningrad', 'Калининград'],
+  ['Europe/Moscow', 'Москва, Петербург'],
+  ['Europe/Samara', 'Самара'],
+  ['Asia/Yekaterinburg', 'Екатеринбург'],
+  ['Asia/Omsk', 'Омск'],
+  ['Asia/Krasnoyarsk', 'Красноярск'],
+  ['Asia/Irkutsk', 'Иркутск'],
+  ['Asia/Yakutsk', 'Якутск'],
+  ['Asia/Vladivostok', 'Владивосток'],
+  ['Asia/Magadan', 'Магадан'],
+  ['Asia/Kamchatka', 'Камчатка'],
+  ['Asia/Almaty', 'Алматы'],
+  ['Asia/Tbilisi', 'Тбилиси'],
+  ['Europe/Minsk', 'Минск'],
+  ['Asia/Yerevan', 'Ереван'],
+] as const;
+
+const THEMES = [
+  ['auto', 'По времени суток'],
+  ['light', 'Всегда светлая'],
+  ['dark', 'Всегда тёмная'],
+] as const;
+
+interface Props {
+  dayBoundary: string;
+  nightFrom: string;
+  timeZone: string;
+  themePref: 'auto' | 'light' | 'dark';
+}
+
+export function SettingsForm(props: Props) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [dayBoundary, setDayBoundary] = useState(props.dayBoundary);
+  const [nightFrom, setNightFrom] = useState(props.nightFrom);
+  const [timeZone, setTimeZone] = useState(props.timeZone);
+  const [theme, setTheme] = useState(props.themePref);
+
+  const zones = ZONES.some(([value]) => value === timeZone)
+    ? ZONES
+    : ([[timeZone, timeZone], ...ZONES] as unknown as typeof ZONES);
+
+  const save = () => {
+    setError(null);
+    setSaved(false);
+    startTransition(async () => {
+      try {
+        await updateDayWindow({ dayBoundary, nightFrom, timeZone });
+        if (theme !== props.themePref) await setThemePref(theme);
+        setSaved(true);
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
+      }
+    });
+  };
+
+  return (
+    <main className={styles.screen}>
+      <header className={styles.head}>
+        <Link href="/" className={styles.back} aria-label="Назад">
+          ‹
+        </Link>
+        <h1>Настройки</h1>
+      </header>
+
+      <section className={styles.block}>
+        <h2>Сутки</h2>
+        <p className={styles.hint}>
+          От этого зависит, к какому дню отнести ночной сон. Если уложились в 00:30, это ещё
+          вчерашние сутки — и в дневнике так и будет.
+        </p>
+
+        <div className={styles.times}>
+          <label className={styles.field}>
+            <span>Утро начинается</span>
+            <input type="time" value={dayBoundary} onChange={(e) => setDayBoundary(e.target.value)} />
+          </label>
+          <label className={styles.field}>
+            <span>Ночь начинается</span>
+            <input type="time" value={nightFrom} onChange={(e) => setNightFrom(e.target.value)} />
+          </label>
+        </div>
+
+        <label className={styles.field}>
+          <span>Часовой пояс</span>
+          <select value={timeZone} onChange={(e) => setTimeZone(e.target.value)}>
+            {zones.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+
+      <section className={styles.block}>
+        <h2>Оформление</h2>
+        <p className={styles.hint}>Ночью приложение открывается тёмным, чтобы не бить в глаза.</p>
+        <div className={styles.chips}>
+          {THEMES.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={theme === value}
+              onClick={() => setTheme(value)}
+              className={`${styles.chip} ${theme === value ? styles.chipOn : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {error && <p className={styles.error}>{error}</p>}
+      {saved && !error && <p className={styles.saved}>Сохранено</p>}
+
+      <button type="button" className={styles.submit} onClick={save} disabled={pending}>
+        {pending ? 'Сохраняем…' : 'Сохранить'}
+      </button>
+    </main>
+  );
+}

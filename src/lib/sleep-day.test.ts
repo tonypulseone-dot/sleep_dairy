@@ -2,13 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   averageTotalSleep,
+  composeSleep,
   DEFAULT_DAY_BOUNDARY,
   DEFAULT_NIGHT_FROM,
+  durationMinutes,
   formatDuration,
+  localDate,
   parseTimeOfDay,
   sleepDayOf,
   sleepKindOf,
   summarizeDay,
+  zonedTimeToUtc,
   type DayWindow,
 } from './sleep-day';
 
@@ -103,4 +107,52 @@ test('некорректное время настройки не проходи
   assert.throws(() => parseTimeOfDay('25:00'));
   assert.throws(() => parseTimeOfDay('6:0'));
   assert.equal(parseTimeOfDay('06:30'), 390);
+});
+
+test('местное время превращается в момент с учётом зоны', () => {
+  assert.equal(
+    zonedTimeToUtc('2026-09-16', parseTimeOfDay('14:00'), 'Europe/Moscow').toISOString(),
+    '2026-09-16T11:00:00.000Z',
+  );
+  assert.equal(
+    zonedTimeToUtc('2026-09-16', parseTimeOfDay('14:00'), 'Asia/Vladivostok').toISOString(),
+    '2026-09-16T04:00:00.000Z',
+  );
+});
+
+test('дневной сон задним числом собирается в тот же календарный день', () => {
+  const { startedAt, endedAt } = composeSleep(
+    '2026-09-16',
+    parseTimeOfDay('14:00'),
+    parseTimeOfDay('15:30'),
+    moscow,
+  );
+  assert.equal(sleepDayOf(startedAt, moscow), '2026-09-16');
+  assert.equal(durationMinutes(startedAt, endedAt), 90);
+});
+
+test('ночь, начатая после полуночи, встаёт на следующую календарную дату', () => {
+  const { startedAt, endedAt } = composeSleep(
+    '2026-09-16',
+    parseTimeOfDay('00:30'),
+    parseTimeOfDay('07:00'),
+    moscow,
+  );
+  // Календарно это 17-е, но сонные сутки — 16-е.
+  assert.equal(localDate(startedAt, 'Europe/Moscow'), '2026-09-17');
+  assert.equal(sleepDayOf(startedAt, moscow), '2026-09-16');
+  assert.equal(sleepKindOf(startedAt, moscow), 'night');
+  assert.equal(formatDuration(durationMinutes(startedAt, endedAt)), '6:30');
+});
+
+test('ночь, начатая вечером, перешагивает полночь и не схлопывается', () => {
+  const { startedAt, endedAt } = composeSleep(
+    '2026-09-17',
+    parseTimeOfDay('21:10'),
+    parseTimeOfDay('06:50'),
+    moscow,
+  );
+  assert.equal(sleepDayOf(startedAt, moscow), '2026-09-17');
+  assert.equal(formatDuration(durationMinutes(startedAt, endedAt)), '9:40');
+  assert.ok(endedAt > startedAt);
 });

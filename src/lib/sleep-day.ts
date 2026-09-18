@@ -203,3 +203,74 @@ export function averageTotalSleep(days: DayTotals[]): number | null {
   const sum = days.reduce((total, day) => total + day.totalSleep, 0);
   return Math.round(sum / days.length);
 }
+
+/* ------------------------------------------------------------------ *
+ * Ручной ввод: из того, что мама набрала на экране, в момент времени
+ * ------------------------------------------------------------------ */
+
+/** Смещение зоны относительно UTC в минутах на конкретный момент. */
+export function tzOffsetMinutes(at: Date, timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts: Record<string, string> = {};
+  for (const part of formatter.formatToParts(at)) {
+    if (part.type !== 'literal') parts[part.type] = part.value;
+  }
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return (asUtc - at.getTime()) / 60000;
+}
+
+/**
+ * Местное время в зоне ребёнка → момент времени.
+ * Считаем в два прохода: первое смещение берём приблизительно,
+ * вторым уточняем — иначе на переводе часов можно промахнуться на час.
+ */
+export function zonedTimeToUtc(date: string, minutes: MinutesOfDay, timeZone: string): Date {
+  const naive = Date.parse(`${date}T00:00:00Z`) + minutes * 60000;
+  const firstPass = new Date(naive - tzOffsetMinutes(new Date(naive), timeZone) * 60000);
+  return new Date(naive - tzOffsetMinutes(firstPass, timeZone) * 60000);
+}
+
+export interface ComposedSleep {
+  startedAt: Date;
+  endedAt: Date;
+}
+
+/**
+ * Мама выбирает сонные сутки и время начала и конца — здесь это превращается
+ * в два момента времени.
+ *
+ * Две ловушки, из-за которых ручной ввод обычно и врёт:
+ *   — сон, начавшийся до утренней границы, календарно уже на следующий день
+ *     (укладывание в 00:30 относится к 16-м суткам, но дата у него 17-е);
+ *   — конец раньше начала означает, что сон перешагнул полночь.
+ */
+export function composeSleep(
+  sleepDay: string,
+  startMinutes: MinutesOfDay,
+  endMinutes: MinutesOfDay,
+  window: DayWindow,
+): ComposedSleep {
+  const startDate = startMinutes < window.dayBoundary ? shiftDate(sleepDay, 1) : sleepDay;
+  const startedAt = zonedTimeToUtc(startDate, startMinutes, window.timeZone);
+
+  const endDate = endMinutes <= startMinutes ? shiftDate(startDate, 1) : startDate;
+  const endedAt = zonedTimeToUtc(endDate, endMinutes, window.timeZone);
+
+  return { startedAt, endedAt };
+}
