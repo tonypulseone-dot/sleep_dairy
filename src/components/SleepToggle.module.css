@@ -1,0 +1,63 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.status {
+  margin: 0;
+  font-size: 17px;
+  color: var(--text-muted);
+  min-height: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Мишень для пальца в темноте, одной рукой, с ребёнком на другой.
+ * Круг, а не прямоугольник: в него легче попасть не глядя.
+ */
+.big {
+  width: min(70vw, 260px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: transform 120ms ease, filter 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.big:active { transform: scale(0.97); }
+.big:disabled { filter: saturate(0.6); cursor: default; }
+
+.sleep { background: var(--sleep); color: var(--sleep-ink); }
+.wake { background: var(--wake); color: var(--wake-ink); }
+
+.offsets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.offsetLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.offset {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.offsetOn {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
+}

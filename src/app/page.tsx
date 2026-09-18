@@ -1,69 +1,98 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { redirect } from 'next/navigation';
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { db } from '@/db';
+import { sleeps } from '@/db/schema';
+import { SleepToggle } from '@/components/SleepToggle';
+import { TelegramBoot } from '@/components/TelegramBoot';
+import { currentChild, currentParent } from '@/lib/session';
+import { formatDuration, sleepDayOf, summarizeDay, type DayWindow } from '@/lib/sleep-day';
+import styles from './page.module.css';
 
-export default function Home() {
+export default async function Home() {
+  const parent = await currentParent();
+  if (!parent) return <TelegramBoot />;
+
+  const child = await currentChild(parent.id);
+  if (!child) redirect('/onboarding');
+
+  const window: DayWindow = {
+    dayBoundary: child.dayBoundaryMinutes,
+    nightFrom: child.nightFromMinutes,
+    timeZone: parent.timeZone,
+  };
+
+  const now = new Date();
+  const today = sleepDayOf(now, window);
+
+  const [todayRows, openRows, endedRows] = await Promise.all([
+    db
+      .select()
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), eq(sleeps.sleepDay, today))),
+    db
+      .select()
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), isNull(sleeps.endedAt)))
+      .orderBy(desc(sleeps.startedAt))
+      .limit(1),
+    db
+      .select()
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), isNotNull(sleeps.endedAt)))
+      .orderBy(desc(sleeps.endedAt))
+      .limit(1),
+  ]);
+
+  const totals = summarizeDay(
+    today,
+    todayRows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
+    window,
+    now,
+  );
+
+  const open = openRows[0] ?? null;
+  const lastEnded = endedRows[0] ?? null;
+
+  const dateLabel = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: parent.timeZone,
+  }).format(now);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className={styles.screen}>
+      <header className={styles.head}>
+        <p className={styles.name}>{child.name}</p>
+        <span className={styles.date}>{dateLabel}</span>
+      </header>
+
+      <div className={styles.center}>
+        <SleepToggle
+          sleepingSince={open ? open.startedAt.toISOString() : null}
+          awakeSince={lastEnded?.endedAt ? lastEnded.endedAt.toISOString() : null}
         />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+
+      {todayRows.length > 0 ? (
+        <section className={styles.totals} aria-label="Итоги за сегодня">
+          <div className={styles.total}>
+            <span className={styles.totalValue}>{formatDuration(totals.daySleep)}</span>
+            <span className={styles.totalLabel}>дневной</span>
+          </div>
+          <div className={styles.total}>
+            <span className={styles.totalValue}>{formatDuration(totals.nightSleep)}</span>
+            <span className={styles.totalLabel}>ночной</span>
+          </div>
+          <div className={styles.total}>
+            <span className={styles.totalValue}>{totals.napCount}</span>
+            <span className={styles.totalLabel}>
+              {totals.napCount === 1 ? 'сон днём' : 'снов днём'}
+            </span>
+          </div>
+        </section>
+      ) : (
+        <p className={styles.empty}>Сегодня записей пока нет</p>
+      )}
+    </main>
   );
 }

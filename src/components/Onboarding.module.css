@@ -1,0 +1,52 @@
+.screen { padding: 22px 16px 40px; max-width: 520px; margin: 0 auto; }
+
+.intro { margin-bottom: 26px; }
+.intro h1 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.22;
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.intro p { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+.form { display: flex; flex-direction: column; gap: 20px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; border: none; padding: 0; margin: 0; min-width: 0; }
+.label { font-size: 15px; font-weight: 500; padding: 0; }
+.hint { font-size: 13px; color: var(--text-muted); }
+
+.checkbox { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.checkbox input { width: 20px; height: 20px; flex: none; padding: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
+.chip {
+  font-size: 14px;
+  padding: 10px 14px;
+  min-height: var(--tap);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.chipOn {
+  border-color: var(--sleep);
+  background: var(--sleep);
+  color: var(--sleep-ink);
+}
+
+.error { color: #C0463A; font-size: 14px; margin: 0; }
+
+.submit {
+  min-height: var(--tap);
+  border-radius: var(--radius);
+  background: var(--sleep);
+  color: var(--sleep-ink);
+  font-size: 17px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.submit:disabled { filter: saturate(0.6); cursor: default; }

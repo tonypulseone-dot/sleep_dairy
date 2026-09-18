@@ -74,6 +74,16 @@ function localParts(at: Date, timeZone: string) {
   };
 }
 
+/** Локальные минуты от полуночи в зоне ребёнка. Нужны и для тем оформления. */
+export function localMinutes(at: Date, timeZone: string): MinutesOfDay {
+  return localParts(at, timeZone).minutes;
+}
+
+/** Локальная дата вида `2026-09-17` в зоне ребёнка. */
+export function localDate(at: Date, timeZone: string): string {
+  return localParts(at, timeZone).date;
+}
+
 /** Сдвигает дату вида `2026-09-17` на `days` суток, оставаясь строкой. */
 export function shiftDate(date: string, days: number): string {
   const shifted = new Date(`${date}T00:00:00Z`);
