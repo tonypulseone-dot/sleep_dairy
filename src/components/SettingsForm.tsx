@@ -126,6 +126,18 @@ export function SettingsForm(props: Props) {
       </section>
 
       <section className={styles.block}>
+        <h2>Выгрузка</h2>
+        <p className={styles.hint}>Таблица со снами за выбранный период — открывается в Excel.</p>
+        <div className={styles.chips}>
+          {[7, 14, 30].map((days) => (
+            <a key={days} href={`/export?days=${days}`} className={styles.chip} download>
+              за {days} дней
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.block}>
         <h2>Доступ к дневнику</h2>
         <p className={styles.hint}>Кто из консультантов видит ваши записи.</p>
         <Link href="/consultant" className={styles.link}>

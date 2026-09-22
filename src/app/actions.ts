@@ -7,6 +7,7 @@ import {
   accessGrants,
   children,
   consultants,
+  feedings,
   parents,
   photoImports,
   sleeps,
@@ -327,4 +328,41 @@ export async function recordImportAttempt(fileCount: number) {
     fileCount: count,
     parseError: 'Разбор ещё не реализован',
   });
+}
+
+/* ------------------------------------------------------------------ *
+ * Кормление
+ *
+ * Виктория: «максимум это сон и кормление, если мама на искусственном.
+ * Когда кормят грудью — там на каждую секунду титечку даёшь, отмечать
+ * это не надо». Поэтому дневник кормления существует только для
+ * искусственного и смешанного, у остальных его нет вовсе.
+ * ------------------------------------------------------------------ */
+
+export async function addFeeding(amountMl: number | null, minutesAgo = 0) {
+  const { child, window } = await requireContext();
+  if (child.feedingType === 'breast') {
+    throw new Error('Дневник кормления нужен только на искусственном вскармливании');
+  }
+
+  const at = shiftBack(new Date(), minutesAgo);
+  const amount = amountMl === null ? null : Math.min(Math.max(Math.round(amountMl), 0), 500);
+
+  await db.insert(feedings).values({
+    childId: child.id,
+    at,
+    sleepDay: sleepDayOf(at, window),
+    amountMl: amount,
+    source: 'manual',
+  });
+  revalidatePath('/feeding');
+}
+
+export async function deleteFeeding(feedingId: string) {
+  const { child } = await requireContext();
+  const [row] = await db.select().from(feedings).where(eq(feedings.id, feedingId)).limit(1);
+  if (!row || row.childId !== child.id) throw new Error('Запись не найдена');
+
+  await db.delete(feedings).where(eq(feedings.id, feedingId));
+  revalidatePath('/feeding');
 }

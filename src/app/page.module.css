@@ -84,3 +84,15 @@
   align-self: center;
   text-wrap: balance;
 }
+
+/* Второй дневник — тихой ссылкой: он нужен не всем и не должен спорить с итогами. */
+.secondary {
+  align-self: center;
+  font-size: 14px;
+  color: var(--ink-3);
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  transition: color 140ms ease, background 140ms ease;
+}
+.secondary:hover { color: var(--ink-2); background: var(--surface); }

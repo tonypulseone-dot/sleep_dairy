@@ -183,6 +183,12 @@ export default async function Home() {
           <span className={styles.empty}>Записей пока нет — открыть дневник</span>
         )}
       </Link>
+
+      {child.feedingType !== 'breast' && (
+        <Link href="/feeding" className={styles.secondary}>
+          Кормления
+        </Link>
+      )}
     </main>
   );
 }
