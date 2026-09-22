@@ -1,0 +1,120 @@
+/*
+ * Кабинет консультанта. Виктория смотрит его с планшета и телефона,
+ * а объясняя маме — скринит экран и обводит прямо поверх. Отсюда
+ * крупный шрифт, высокий контраст и ничего лишнего по краям:
+ * таблица должна читаться на скриншоте.
+ */
+
+.loginScreen { min-height: 100%; display: grid; place-items: center; padding: 24px 16px; }
+.loginForm {
+  width: 100%; max-width: 380px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 26px 24px 24px;
+}
+.loginForm h1 { font-size: 21px; font-weight: 600; margin: 0; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field span { font-size: 13px; color: var(--text-muted); }
+.hint { font-size: 13.5px; color: var(--text-muted); margin: -6px 0 4px; }
+.error { color: #C0463A; font-size: 14px; margin: 0; }
+
+.primary {
+  min-height: var(--tap); border-radius: 14px;
+  background: var(--sleep); color: var(--sleep-ink);
+  font-size: 16px; font-weight: 500;
+}
+.primary:disabled { opacity: 0.6; cursor: default; }
+
+.screen { max-width: 1040px; margin: 0 auto; padding: 22px 20px 48px; display: flex; flex-direction: column; gap: 22px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; }
+.top h1 { font-size: 22px; font-weight: 600; margin: 0; }
+.who { font-size: 13.5px; color: var(--text-muted); display: flex; align-items: center; gap: 12px; }
+.linkish { color: var(--text-muted); text-decoration: underline; font-size: 13.5px; }
+
+.invite {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.invite b { font-size: 14px; font-weight: 600; }
+.invite code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px; color: var(--text); word-break: break-all;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 11px;
+}
+.invite span { font-size: 13px; color: var(--text-muted); }
+
+.clients { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+@media (min-width: 720px) { .clients { grid-template-columns: repeat(2, 1fr); } }
+
+.client {
+  display: block; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.clientName { font-size: 17px; font-weight: 600; }
+.clientMeta { font-size: 13.5px; color: var(--text-muted); margin-top: 3px; }
+
+.empty {
+  background: var(--surface); border: 1px dashed var(--line);
+  border-radius: var(--radius); padding: 26px 20px; text-align: center;
+  color: var(--text-muted); font-size: 14px;
+}
+
+/* --- карточка клиента --- */
+
+.card { display: flex; flex-direction: column; gap: 6px; }
+.cardName { font-size: 22px; font-weight: 600; }
+.cardMeta { font-size: 14px; color: var(--text-muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag {
+  font-size: 12.5px; padding: 5px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text-muted);
+}
+.health {
+  margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+  background: var(--nap-bg); color: var(--nap-ink); font-size: 14px;
+}
+
+.periods { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.periodLabel { font-size: 13.5px; color: var(--text-muted); margin-right: 2px; }
+.period {
+  font-size: 13.5px; padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--text-muted); text-decoration: none;
+}
+.periodOn { border-color: var(--sleep); background: var(--sleep); color: var(--sleep-ink); }
+
+.tableWrap {
+  overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 15px; }
+.table th {
+  text-align: left; font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: 13px 14px; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.table td {
+  padding: 13px 14px; border-bottom: 1px solid var(--line);
+  vertical-align: top; font-variant-numeric: tabular-nums;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.dateCell { white-space: nowrap; font-weight: 500; }
+.napList { color: var(--nap-ink); }
+.nightCell { color: var(--night-ink); font-weight: 600; }
+.dayCell { color: var(--nap-ink); font-weight: 600; }
+.totalCell { font-weight: 600; font-size: 17px; }
+.muted { color: var(--text-muted); }
+
+.average {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+  padding: 16px 18px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.averageLabel { font-size: 14px; color: var(--text-muted); }
+.averageValue { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.averageNote { font-size: 13px; color: var(--text-muted); }

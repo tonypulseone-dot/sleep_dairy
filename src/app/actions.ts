@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { children, parents, sleeps } from '@/db/schema';
+import { accessGrants, children, consultants, parents, sleeps } from '@/db/schema';
+import { CONSENT_VERSION } from '@/lib/consent';
 import { currentChild, currentParent } from '@/lib/session';
 import {
   composeSleep,
@@ -245,4 +246,56 @@ export async function setThemePref(pref: 'auto' | 'light' | 'dark') {
   const { parent } = await requireContext();
   await db.update(parents).set({ themePref: pref }).where(eq(parents.id, parent.id));
   revalidatePath('/', 'layout');
+}
+
+/* ------------------------------------------------------------------ *
+ * Доступ консультанта
+ *
+ * Виктория: «когда сотрудничество заканчивается, я не могу видеть уже
+ * её дневник». Поэтому доступ мама даёт явно и отзывает в один тап,
+ * а дневник остаётся у неё навсегда.
+ * ------------------------------------------------------------------ */
+
+export async function grantAccess(slug: string) {
+  const { child } = await requireContext();
+
+  const [consultant] = await db
+    .select()
+    .from(consultants)
+    .where(eq(consultants.slug, slug))
+    .limit(1);
+  if (!consultant) throw new Error('Консультант не найден');
+
+  const [existing] = await db
+    .select()
+    .from(accessGrants)
+    .where(
+      and(
+        eq(accessGrants.childId, child.id),
+        eq(accessGrants.consultantId, consultant.id),
+        isNull(accessGrants.revokedAt),
+      ),
+    )
+    .limit(1);
+  if (existing) return;
+
+  await db.insert(accessGrants).values({
+    childId: child.id,
+    consultantId: consultant.id,
+    consentVersion: CONSENT_VERSION,
+  });
+  revalidatePath('/consultant');
+}
+
+export async function revokeAccess(grantId: string) {
+  const { child } = await requireContext();
+
+  const [grant] = await db.select().from(accessGrants).where(eq(accessGrants.id, grantId)).limit(1);
+  if (!grant || grant.childId !== child.id) throw new Error('Доступ не найден');
+
+  await db
+    .update(accessGrants)
+    .set({ revokedAt: new Date() })
+    .where(eq(accessGrants.id, grantId));
+  revalidatePath('/consultant');
 }

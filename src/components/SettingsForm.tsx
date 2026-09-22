@@ -125,6 +125,14 @@ export function SettingsForm(props: Props) {
         </div>
       </section>
 
+      <section className={styles.block}>
+        <h2>Доступ к дневнику</h2>
+        <p className={styles.hint}>Кто из консультантов видит ваши записи.</p>
+        <Link href="/consultant" className={styles.link}>
+          Мой консультант
+        </Link>
+      </section>
+
       {error && <p className={styles.error}>{error}</p>}
       {saved && !error && <p className={styles.saved}>Сохранено</p>}
 

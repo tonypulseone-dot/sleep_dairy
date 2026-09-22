@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (body.dev && process.env.NODE_ENV !== 'production') {
     const parent = await upsertParent({ telegramId: 'dev-1', firstName: 'Разработка' });
     await setSessionCookie(parent.id);
-    return NextResponse.json({ ok: true, dev: true });
+    return NextResponse.json({ ok: true, dev: true, invite: null });
   }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -33,5 +33,6 @@ export async function POST(request: Request) {
     firstName: verified.user.first_name ?? null,
   });
   await setSessionCookie(parent.id);
-  return NextResponse.json({ ok: true });
+  // Хвост ссылки-приглашения: по нему мама попадёт на экран согласия.
+  return NextResponse.json({ ok: true, invite: verified.startParam ?? null });
 }

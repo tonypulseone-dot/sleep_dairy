@@ -36,6 +36,8 @@ export const consultants = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     email: text('email').notNull(),
+    /** scrypt: соль и хеш. Пароль в открытом виде не хранится нигде. */
+    passwordHash: text('password_hash').notNull(),
     name: text('name').notNull(),
     /** Хвост личной ссылки-приглашения: t.me/bot/app?startapp=<slug> */
     slug: text('slug').notNull(),

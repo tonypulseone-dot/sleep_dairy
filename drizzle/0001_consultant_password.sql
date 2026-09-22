@@ -1,0 +1,1 @@
+ALTER TABLE "consultants" ADD COLUMN "password_hash" text NOT NULL;

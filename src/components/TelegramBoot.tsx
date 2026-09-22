@@ -35,7 +35,9 @@ export function TelegramBoot() {
     })
       .then(async (response) => {
         if (response.ok) {
-          window.location.reload();
+          const body = (await response.json().catch(() => ({}))) as { invite?: string | null };
+          // Мама пришла по ссылке консультанта — сразу на экран согласия.
+          window.location.href = body.invite ? `/connect?c=${encodeURIComponent(body.invite)}` : '/';
           return;
         }
         setError(await response.text());
