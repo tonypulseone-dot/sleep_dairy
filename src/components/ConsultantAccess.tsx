@@ -53,7 +53,12 @@ export function ConnectPrompt({ slug, consultantName }: { slug: string; consulta
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
           <span>
             Я согласна передать консультанту данные о сне и здоровье моего ребёнка на время
-            консультации. Доступ можно отозвать в любой момент, дневник останется у меня.
+            консультации — на условиях{' '}
+            {/* Ссылка внутри подписи к галочке: клик по ней не должен её переключать. */}
+            <Link href="/privacy" className={styles.policy} onClick={(e) => e.stopPropagation()}>
+              политики конфиденциальности
+            </Link>
+            . Доступ можно отозвать в любой момент, дневник останется у меня.
           </span>
         </label>
       </div>

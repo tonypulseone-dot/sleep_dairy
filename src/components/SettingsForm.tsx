@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { setThemePref, updateDayWindow } from '@/app/actions';
+import { deleteEverything, setThemePref, updateDayWindow } from '@/app/actions';
 import styles from './SettingsForm.module.css';
 
 /** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
@@ -44,6 +44,12 @@ export function SettingsForm(props: Props) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Удаление живёт в своём переходе: пока оно идёт, кнопка «Сохранить»
+  // не должна мигать «Сохраняем…».
+  const [removing, startRemoving] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
   const [dayBoundary, setDayBoundary] = useState(props.dayBoundary);
   const [nightFrom, setNightFrom] = useState(props.nightFrom);
   const [timeZone, setTimeZone] = useState(props.timeZone);
@@ -64,6 +70,20 @@ export function SettingsForm(props: Props) {
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
+      }
+    });
+  };
+
+  const remove = () => {
+    setRemoveError(null);
+    startRemoving(async () => {
+      try {
+        await deleteEverything();
+        // Не на главную: там приложение завело бы маму заново, и вышло бы,
+        // будто удаление не сработало.
+        router.replace('/deleted');
+      } catch (cause) {
+        setRemoveError(cause instanceof Error ? cause.message : 'Не получилось удалить');
       }
     });
   };
@@ -151,6 +171,54 @@ export function SettingsForm(props: Props) {
       <button type="button" className={styles.submit} onClick={save} disabled={pending}>
         {pending ? 'Сохраняем…' : 'Сохранить'}
       </button>
+
+      <section className={styles.block}>
+        <h2>Данные</h2>
+        <p className={styles.hint}>
+          Что мы храним, кому показываем и как это удалить — написано в политике.
+        </p>
+        <Link href="/privacy" className={styles.link}>
+          Политика конфиденциальности
+        </Link>
+
+        {/*
+          Удаление в два шага. Первый — обычная неяркая кнопка: промахнуться
+          мимо неё не страшно. Второй — то, что именно исчезнет, и предложение
+          сначала выгрузить дневник: отменить это действие уже нельзя.
+        */}
+        {!confirming ? (
+          <button type="button" className={styles.danger} onClick={() => setConfirming(true)}>
+            Удалить дневник
+          </button>
+        ) : (
+          <div className={styles.dangerBox}>
+            <p className={styles.dangerText}>
+              Исчезнут все записи о снах и кормлениях, данные малыша и доступ консультанта.
+              Восстановить их будет нельзя.
+            </p>
+            <a href="/export?days=365" className={styles.link} download>
+              Сначала скачать дневник таблицей
+            </a>
+            <button
+              type="button"
+              className={styles.danger}
+              onClick={remove}
+              disabled={removing}
+            >
+              {removing ? 'Удаляем…' : 'Да, удалить всё'}
+            </button>
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={() => setConfirming(false)}
+              disabled={removing}
+            >
+              Отмена
+            </button>
+            {removeError && <p className={styles.error}>{removeError}</p>}
+          </div>
+        )}
+      </section>
     </main>
   );
 }

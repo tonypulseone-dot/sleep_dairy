@@ -52,6 +52,12 @@ export async function setSessionCookie(parentId: string) {
   });
 }
 
+/** Выйти из сессии: нужна при удалении дневника, чтобы кука не вела на пустоту. */
+export async function clearSessionCookie() {
+  const store = await cookies();
+  store.delete(COOKIE);
+}
+
 export async function currentParentId(): Promise<string | null> {
   const store = await cookies();
   return unpackSession(store.get(COOKIE)?.value);

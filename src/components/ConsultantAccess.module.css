@@ -55,3 +55,5 @@
   border-bottom: 1px solid var(--line);
 }
 .consentWho b { color: var(--ink); font-weight: 600; }
+
+.policy { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

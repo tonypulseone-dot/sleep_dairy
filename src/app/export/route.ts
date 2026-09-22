@@ -24,7 +24,7 @@ import {
  * десятичный разделитель.
  */
 
-const PERIODS = [5, 7, 10, 14, 30];
+const PERIODS = [5, 7, 10, 14, 30, 365];
 
 function cell(value: string): string {
   return value.includes(';') || value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createChild } from '@/app/actions';
 import { Moon } from './Moon';
@@ -175,6 +176,16 @@ export function Onboarding() {
         <button type="submit" className={styles.submit} disabled={pending}>
           {pending ? 'Сохраняем…' : 'Начать дневник'}
         </button>
+
+        {/*
+          Про здоровье малыша мы спрашиваем прямо здесь, поэтому и ссылка на
+          политику стоит здесь же, а не прячется в настройках.
+        */}
+        <p className={styles.policyNote}>
+          Начиная дневник, вы соглашаетесь с{' '}
+          <Link href="/privacy">политикой конфиденциальности</Link> — что мы храним, кому
+          показываем и как всё удалить.
+        </p>
       </form>
     </main>
   );

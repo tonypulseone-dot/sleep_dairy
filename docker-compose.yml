@@ -38,6 +38,12 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?задайте SESSION_SECRET}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       APP_URL: https://${APP_DOMAIN:?задайте APP_DOMAIN}
+      # Реквизиты для политики конфиденциальности. Без них страница /privacy
+      # открывается с предупреждением, что документ не заполнен.
+      LEGAL_OPERATOR: ${LEGAL_OPERATOR:-}
+      LEGAL_INN: ${LEGAL_INN:-}
+      LEGAL_EMAIL: ${LEGAL_EMAIL:-}
+      LEGAL_HOSTING: ${LEGAL_HOSTING:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -1,0 +1,41 @@
+.screen {
+  padding: 14px 16px 44px; max-width: 620px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.head { display: flex; align-items: center; gap: 6px; }
+.head h1 {
+  font-family: var(--font-display);
+  font-size: 19px; font-weight: 600; letter-spacing: -.01em; margin: 0;
+}
+.back {
+  font-size: 30px; line-height: 1; color: var(--ink-2);
+  width: 40px; height: 40px; display: grid; place-items: center; flex: none;
+  background: none; border: none; padding: 0;
+}
+
+.updated { font-size: 13px; color: var(--ink-3); margin: -12px 0 0; }
+
+/* Предупреждение про незаполненные реквизиты — видно и не спутать с текстом. */
+.gaps {
+  border: 1px solid var(--danger); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink);
+  padding: 14px 16px; font-size: 14px; line-height: 1.5; margin: 0;
+}
+.gaps b { color: var(--danger); }
+
+.block { display: flex; flex-direction: column; gap: 8px; }
+.block h2 {
+  font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.005em;
+}
+.block p { font-size: 14.5px; line-height: 1.55; color: var(--ink-2); margin: 0; }
+.block b { color: var(--ink); font-weight: 600; }
+
+.list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.list li { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.list b { color: var(--ink); font-weight: 600; }
+
+.footer {
+  border-top: 1px solid var(--line-soft); padding-top: 16px;
+  font-size: 13.5px; color: var(--ink-3); line-height: 1.5;
+}

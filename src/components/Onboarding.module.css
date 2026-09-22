@@ -101,3 +101,6 @@
 
 /* Заголовок шага с вопросами держим в той же антикве, что и приветствие. */
 .intro h1 { font-family: var(--font-display); letter-spacing: -.015em; }
+
+.policyNote { font-size: 13px; line-height: 1.5; color: var(--ink-3); margin: 0; text-align: center; }
+.policyNote a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }

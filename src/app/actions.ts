@@ -12,7 +12,7 @@ import {
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
-import { currentChild, currentParent } from '@/lib/session';
+import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
 import {
   composeSleep,
   parseTimeOfDay,
@@ -342,4 +342,24 @@ export async function deleteFeeding(feedingId: string) {
 
   await db.delete(feedings).where(eq(feedings.id, feedingId));
   revalidatePath('/feeding');
+}
+
+/**
+ * Удалить дневник целиком — по требованию мамы.
+ *
+ * По 152-ФЗ это её право, и делать это должна она сама, а не переписка
+ * с поддержкой. Всё висит на строке родителя каскадом: ребёнок, сны,
+ * кормления, выданные консультанту доступы, его заметки и следы загрузок
+ * уходят вместе с ней — осиротевших записей не остаётся.
+ *
+ * Сессию гасим здесь же: иначе подписанная кука продолжит указывать
+ * на удалённого родителя, и приложение будет выглядеть сломанным.
+ */
+export async function deleteEverything() {
+  const parent = await currentParent();
+  if (!parent) throw new Error('Сессия не найдена');
+
+  await db.delete(parents).where(eq(parents.id, parent.id));
+  await clearSessionCookie();
+  revalidatePath('/', 'layout');
 }
