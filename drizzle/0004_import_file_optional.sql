@@ -1,0 +1,1 @@
+ALTER TABLE "photo_imports" ALTER COLUMN "file_key" DROP NOT NULL;

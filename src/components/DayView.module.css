@@ -95,3 +95,13 @@
 .save:disabled, .ghost:disabled, .danger:disabled { opacity: 0.6; cursor: default; }
 
 .error { color: #C0463A; font-size: 14px; margin: 0; }
+
+.addRow { display: flex; gap: 8px; }
+.addRow .add { flex: 1; }
+
+.addPhoto {
+  min-height: var(--tap); padding: 0 18px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text);
+  font-size: 15px; font-weight: 500; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; white-space: nowrap;
+}

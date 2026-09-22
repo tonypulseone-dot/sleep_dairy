@@ -1,0 +1,1 @@
+ALTER TABLE "photo_imports" ADD COLUMN "file_count" smallint;

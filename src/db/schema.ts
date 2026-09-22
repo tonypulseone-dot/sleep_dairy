@@ -234,12 +234,19 @@ export const photoImports = pgTable(
     childId: uuid('child_id')
       .notNull()
       .references(() => children.id, { onDelete: 'cascade' }),
-    fileKey: text('file_key').notNull(),
+    /**
+     * Где лежит файл. Пусто — мама открыла загрузку, но разбора ещё нет,
+     * и сам снимок мы не храним: держать фотографии детских дневников,
+     * которые пока нечем обработать, смысла нет.
+     */
+    fileKey: text('file_key'),
     status: importStatus('status').notNull().default('uploaded'),
     /** Что распозналось до маминых правок. */
     parsed: jsonb('parsed').$type<unknown>(),
     parseError: text('parse_error'),
 
+    /** Сколько снимков мама выбрала за один заход. */
+    fileCount: smallint('file_count'),
     recordsParsed: smallint('records_parsed'),
     /**
      * Сколько записей мама поправила на экране проверки.

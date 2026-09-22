@@ -156,13 +156,18 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
           onCancel={() => setDraft(null)}
         />
       ) : (
-        <button
-          type="button"
-          className={styles.add}
-          onClick={() => setDraft({ id: null, start: '13:00', end: '14:30' })}
-        >
-          Добавить сон
-        </button>
+        <div className={styles.addRow}>
+          <button
+            type="button"
+            className={styles.add}
+            onClick={() => setDraft({ id: null, start: '13:00', end: '14:30' })}
+          >
+            Добавить сон
+          </button>
+          <Link href="/import" className={styles.addPhoto}>
+            Загрузить снимками
+          </Link>
+        </div>
       )}
     </main>
   );
