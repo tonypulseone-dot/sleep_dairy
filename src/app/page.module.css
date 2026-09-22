@@ -96,3 +96,5 @@
   transition: color 140ms ease, background 140ms ease;
 }
 .secondary:hover { color: var(--ink-2); background: var(--surface); }
+
+.links { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }

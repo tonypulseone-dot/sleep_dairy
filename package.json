@@ -13,12 +13,18 @@
     "db:studio": "drizzle-kit studio",
     "seed:consultant": "tsx --env-file=.env.local scripts/seed-consultant.ts",
     "seed:demo": "tsx --env-file=.env.local scripts/seed-demo-diary.ts",
-    "seed:norms": "tsx --env-file=.env.local scripts/seed-norms.ts"
+    "seed:norms": "tsx --env-file=.env.local scripts/seed-norms.ts",
+    "seed:activities": "tsx --env-file=.env.local scripts/seed-activities.ts",
+    "bot": "tsx --env-file=.env.local src/bot/index.ts",
+    "bot:prod": "tsx src/bot/index.ts",
+    "db:apply": "tsx --env-file=.env.local src/db/migrate.ts",
+    "db:apply:prod": "node --experimental-strip-types src/db/migrate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
     "@telegram-apps/sdk-react": "^3.3.9",
     "drizzle-orm": "^0.45.2",
+    "grammy": "^1.46.0",
     "next": "16.3.5",
     "pg": "^8.23.0",
     "react": "19.2.8",

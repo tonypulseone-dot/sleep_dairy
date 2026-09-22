@@ -184,11 +184,16 @@ export default async function Home() {
         )}
       </Link>
 
-      {child.feedingType !== 'breast' && (
-        <Link href="/feeding" className={styles.secondary}>
-          Кормления
+      <div className={styles.links}>
+        {child.feedingType !== 'breast' && (
+          <Link href="/feeding" className={styles.secondary}>
+            Кормления
+          </Link>
+        )}
+        <Link href="/activities" className={styles.secondary}>
+          Чем заняться
         </Link>
-      )}
+      </div>
     </main>
   );
 }
