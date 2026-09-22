@@ -6,10 +6,9 @@ import { createChild } from '@/app/actions';
 import styles from './Onboarding.module.css';
 
 /**
- * Варианты темперамента — черновые.
- * Виктория обещала прислать свой список: «надо сделать через тестирование,
- * накидать варианты, чтобы она отмечала, а не вспоминала».
- * Заменить целиком, когда список придёт.
+ * Темперамент вынесен из обязательных вопросов по просьбе Виктории:
+ * «80% приходят мамы малышей 1–4 месяцев, там ещё непонятно ничего».
+ * Оставляем как необязательный блок с её же формулировкой про пропуск.
  */
 const TEMPERAMENT = [
   'Спокойный, легко успокаивается',
@@ -31,6 +30,7 @@ export function Onboarding() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [isPreterm, setIsPreterm] = useState(false);
@@ -90,25 +90,8 @@ export function Onboarding() {
         )}
 
         <fieldset className={styles.field}>
-          <legend className={styles.label}>Что ближе к малышу</legend>
-          <span className={styles.hint}>Можно отметить несколько или пропустить</span>
-          <div className={styles.chips}>
-            {TEMPERAMENT.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={temperament.includes(option)}
-                onClick={() => toggle(option)}
-                className={`${styles.chip} ${temperament.includes(option) ? styles.chipOn : ''}`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className={styles.field}>
           <legend className={styles.label}>Вскармливание</legend>
+          <span className={styles.hint}>От этого зависит, показывать ли дневник кормления</span>
           <div className={styles.chips}>
             {FEEDING.map((option) => (
               <button
@@ -124,18 +107,48 @@ export function Onboarding() {
           </div>
         </fieldset>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Особенности здоровья</span>
-          <span className={styles.hint}>
-            Например, анемия или колики — это меняет тактику работы со сном
-          </span>
-          <textarea
-            value={healthNotes}
-            onChange={(e) => setHealthNotes(e.target.value)}
-            rows={3}
-            maxLength={500}
-          />
-        </label>
+        {showMore ? (
+          <>
+            <fieldset className={styles.field}>
+              <legend className={styles.label}>Что ближе к малышу</legend>
+              <span className={styles.hint}>
+                Можно пропустить, если малышу ещё нет четырёх месяцев — в этом возрасте характер
+                сна только складывается.
+              </span>
+              <div className={styles.chips}>
+                {TEMPERAMENT.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={temperament.includes(option)}
+                    onClick={() => toggle(option)}
+                    className={`${styles.chip} ${temperament.includes(option) ? styles.chipOn : ''}`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className={styles.field}>
+              <span className={styles.label}>Особенности здоровья</span>
+              <span className={styles.hint}>
+                Например, анемия или колики — это меняет тактику работы со сном
+              </span>
+              <textarea
+                value={healthNotes}
+                onChange={(e) => setHealthNotes(e.target.value)}
+                rows={3}
+                maxLength={500}
+              />
+            </label>
+          </>
+        ) : (
+          <button type="button" className={styles.more} onClick={() => setShowMore(true)}>
+            Рассказать о малыше подробнее
+            <span>темперамент и особенности здоровья — необязательно</span>
+          </button>
+        )}
 
         {error && <p className={styles.error}>{error}</p>}
 

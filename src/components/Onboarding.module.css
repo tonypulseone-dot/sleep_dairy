@@ -50,3 +50,17 @@
   margin-top: 4px;
 }
 .submit:disabled { filter: saturate(0.6); cursor: default; }
+
+/*
+ * Необязательные вопросы спрятаны за одной строкой: Виктория просила убрать
+ * их с первого экрана, потому что большинство мам приходят с малышами
+ * 1–4 месяцев, для которых отвечать на них ещё рано.
+ */
+.more {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  min-height: var(--tap); padding: 12px 16px;
+  border: 1px dashed var(--line); border-radius: 14px;
+  background: transparent; color: var(--text);
+  font-size: 15px; text-align: left;
+}
+.more span { font-size: 13px; color: var(--text-muted); }

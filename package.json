@@ -12,7 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "seed:consultant": "tsx --env-file=.env.local scripts/seed-consultant.ts",
-    "seed:demo": "tsx --env-file=.env.local scripts/seed-demo-diary.ts"
+    "seed:demo": "tsx --env-file=.env.local scripts/seed-demo-diary.ts",
+    "seed:norms": "tsx --env-file=.env.local scripts/seed-norms.ts"
   },
   "dependencies": {
     "@telegram-apps/sdk-react": "^3.3.9",

@@ -258,20 +258,44 @@ export const photoImports = pgTable(
  * Контент Виктории
  * ------------------------------------------------------------------ */
 
-/** Таблица норм режимов 1–18 мес. Показываем диапазоном и только пока мало своих данных. */
-export const rhythmNorms = pgTable('rhythm_norms', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  ageMonthsFrom: smallint('age_months_from').notNull(),
-  ageMonthsTo: smallint('age_months_to').notNull(),
-  wakeWindowMin: smallint('wake_window_min'),
-  wakeWindowMax: smallint('wake_window_max'),
-  napsMin: smallint('naps_min'),
-  napsMax: smallint('naps_max'),
-  daySleepMin: smallint('day_sleep_min'),
-  daySleepMax: smallint('day_sleep_max'),
-  nightSleepMin: smallint('night_sleep_min'),
-  nightSleepMax: smallint('night_sleep_max'),
-});
+/**
+ * Таблица режимов Виктории. Всё в минутах.
+ *
+ * Формат её собственный, и он богаче обычных «норм»: на один возраст
+ * приходится несколько вариантов режима по числу снов, а окна бодрствования
+ * заданы по порядку — первое короче последнего.
+ *
+ * Показываем диапазоном и только пока своих данных мало. Её же оговорка
+ * едет вместе с цифрами: «Это ориентиры, а не строгие правила».
+ */
+export const rhythmNorms = pgTable(
+  'rhythm_norms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    ageMonthsFrom: smallint('age_months_from').notNull(),
+    ageMonthsTo: smallint('age_months_to').notNull(),
+    /** Сколько снов в этом варианте режима. Пусто — вариант один. */
+    napsCount: smallint('naps_count'),
+
+    /** Окна бодрствования по порядку: [{min, max}, …] — 1ВБ, 2ВБ и так далее. */
+    wakeWindows: jsonb('wake_windows').$type<{ min: number; max: number }[]>(),
+
+    /** СВБ — суммарное бодрствование за сутки. */
+    totalWakeMin: smallint('total_wake_min'),
+    totalWakeMax: smallint('total_wake_max'),
+    /** ДС — суммарный дневной сон. */
+    daySleepMin: smallint('day_sleep_min'),
+    daySleepMax: smallint('day_sleep_max'),
+    nightSleepMin: smallint('night_sleep_min'),
+    nightSleepMax: smallint('night_sleep_max'),
+    /** Суточный сон — заполнен для младших возрастов, где режима ещё нет. */
+    totalSleepMin: smallint('total_sleep_min'),
+    totalSleepMax: smallint('total_sleep_max'),
+
+    note: text('note'),
+  },
+  (table) => [index('rhythm_norms_age_idx').on(table.ageMonthsFrom, table.ageMonthsTo)],
+);
 
 /** Чем занять ребёнка в бодрствование — мамы принимают скуку за усталость. */
 export const activities = pgTable(

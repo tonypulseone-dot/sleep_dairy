@@ -1,0 +1,1 @@
+DROP TABLE "rhythm_norms" CASCADE;
