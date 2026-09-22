@@ -1,0 +1,39 @@
+.wrap {
+  position: relative;
+  width: min(84vw, 328px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.track { stroke: var(--line); }
+
+.day { stroke: var(--day); }
+.night { stroke: var(--night); }
+
+/* Идущий сон дышит: медленно, чтобы в темноте это успокаивало, а не мельтешило. */
+.ongoing { animation: breathe 4.5s ease-in-out infinite; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+.tick {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: .04em;
+}
+
+.now { fill: var(--ink-2); }
+
+.center {
+  position: relative;
+  width: 60%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}

@@ -274,3 +274,57 @@ export function composeSleep(
 
   return { startedAt, endedAt };
 }
+
+/* ------------------------------------------------------------------ *
+ * Суточное кольцо
+ *
+ * Сутки — это круг, и консультанты читают день именно так: не списком,
+ * а формой. Здесь сны раскладываются в доли круга, где верх — утренняя
+ * граница, то есть начало дня этой мамы, а не абстрактная полночь.
+ * ------------------------------------------------------------------ */
+
+/** Момент, с которого начинаются сонные сутки. */
+export function dayStartInstant(sleepDay: string, window: DayWindow): Date {
+  return zonedTimeToUtc(sleepDay, window.dayBoundary, window.timeZone);
+}
+
+export interface DaySegment {
+  /** Минуты от начала суток, 0…1440. */
+  from: number;
+  to: number;
+  kind: SleepKind;
+  /** Сон ещё идёт — рисуем его иначе. */
+  ongoing: boolean;
+}
+
+/**
+ * Раскладывает сны суток по кругу.
+ *
+ * Края подрезаем по суткам: ночной сон, начавшийся в 23:40 и закончившийся
+ * утром, упирается в конец круга, а не уходит на второй виток. Иначе дуга
+ * наложилась бы на утренние сны и день читался бы неверно.
+ */
+export function daySegments(
+  sleepDay: string,
+  records: SleepRecord[],
+  window: DayWindow,
+  now: Date = new Date(),
+): DaySegment[] {
+  const start = dayStartInstant(sleepDay, window).getTime();
+  const minutesFrom = (at: Date) => (at.getTime() - start) / 60000;
+
+  return records
+    .map((record) => {
+      const from = Math.max(0, Math.min(1440, minutesFrom(record.startedAt)));
+      const rawTo = minutesFrom(record.endedAt ?? now);
+      const to = Math.max(from, Math.min(1440, rawTo));
+      return {
+        from,
+        to,
+        kind: sleepKindOf(record.startedAt, window),
+        ongoing: record.endedAt === null,
+      };
+    })
+    .filter((segment) => segment.to > segment.from)
+    .sort((a, b) => a.from - b.from);
+}

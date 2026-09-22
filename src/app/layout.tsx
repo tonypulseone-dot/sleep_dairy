@@ -34,9 +34,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&family=JetBrains+Mono:wght@400;500&display=swap"
         />
-        <meta name="theme-color" content={theme === 'dark' ? '#0B0E14' : '#F6F5F1'} />
+        <meta name="theme-color" content={theme === 'dark' ? '#0B0F1A' : '#F7F5F0'} />
       </head>
       <body>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />

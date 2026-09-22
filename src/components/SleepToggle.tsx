@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { startSleep, stopSleep } from '@/app/actions';
+import { SleepRing } from './SleepRing';
+import type { DaySegment } from '@/lib/sleep-day';
 import styles from './SleepToggle.module.css';
 
 interface Props {
@@ -9,6 +11,13 @@ interface Props {
   sleepingSince: string | null;
   /** Конец последнего сна — от него считаем бодрствование. */
   awakeSince: string | null;
+  segments: DaySegment[];
+  dayBoundary: number;
+  nowMinutes: number | null;
+  /** «обычно бодрствует около 1 ч 25 мин» — пусто, если показывать нечего. */
+  hint: string | null;
+  /** Сон идёт неправдоподобно долго: похоже, забыли отметить пробуждение. */
+  stale: boolean;
 }
 
 /** 72 → «1 ч 12 мин». Для мамы, а не для таблицы. */
@@ -22,7 +31,15 @@ function human(minutes: number): string {
 
 const OFFSETS = [0, 5, 10, 15] as const;
 
-export function SleepToggle({ sleepingSince, awakeSince }: Props) {
+export function SleepToggle({
+  sleepingSince,
+  awakeSince,
+  segments,
+  dayBoundary,
+  nowMinutes,
+  hint,
+  stale,
+}: Props) {
   const isSleeping = sleepingSince !== null;
   const since = sleepingSince ?? awakeSince;
 
@@ -30,8 +47,8 @@ export function SleepToggle({ sleepingSince, awakeSince }: Props) {
   const [offset, setOffset] = useState<number>(0);
   const [pending, startTransition] = useTransition();
 
-  // Часы тикают только в браузере: на сервере времени «сейчас» ещё нет,
-  // и рисовать его в разметке — значит получить расхождение при гидрации.
+  // Часы тикают только в браузере: на сервере «сейчас» ещё нет,
+  // и нарисованное время разошлось бы с разметкой при гидрации.
   useEffect(() => {
     if (!since) {
       setElapsed(null);
@@ -46,40 +63,40 @@ export function SleepToggle({ sleepingSince, awakeSince }: Props) {
 
   const act = () => {
     startTransition(async () => {
-      if (isSleeping) {
-        await stopSleep(offset);
-      } else {
-        await startSleep(offset);
-      }
+      if (isSleeping) await stopSleep(offset);
+      else await startSleep(offset);
       setOffset(0);
     });
   };
 
   return (
     <div className={styles.wrap}>
-      <p className={styles.status} aria-live="polite">
-        {elapsed === null
-          ? since
-            ? ' '
-            : 'Первый сон ещё не отмечен'
-          : isSleeping
-            ? `Спит ${human(elapsed)}`
-            : `Бодрствует ${human(elapsed)}`}
-      </p>
+      <SleepRing segments={segments} dayBoundary={dayBoundary} nowMinutes={nowMinutes}>
+        <button
+          type="button"
+          onClick={act}
+          disabled={pending}
+          className={`${styles.big} ${isSleeping ? styles.wake : styles.sleep}`}
+        >
+          <span className={styles.bigLabel}>{isSleeping ? 'Проснулся' : 'Уснул'}</span>
+        </button>
+      </SleepRing>
 
-      <button
-        type="button"
-        onClick={act}
-        disabled={pending}
-        className={`${styles.big} ${isSleeping ? styles.wake : styles.sleep}`}
-      >
-        {isSleeping ? 'Проснулся' : 'Уснул'}
-      </button>
+      <div className={styles.status} aria-live="polite">
+        <p className={styles.elapsed}>
+          {elapsed === null
+            ? since
+              ? ' '
+              : 'Первый сон ещё не отмечен'
+            : isSleeping
+              ? `Спит ${human(elapsed)}`
+              : `Бодрствует ${human(elapsed)}`}
+        </p>
+        {hint && <p className={styles.hint}>{hint}</p>}
+      </div>
 
       <div className={styles.offsets} role="group" aria-label="Когда это случилось">
-        <span className={styles.offsetLabel}>
-          {isSleeping ? 'проснулся' : 'уснул'}
-        </span>
+        <span className={styles.offsetLabel}>{isSleeping ? 'проснулся' : 'уснул'}</span>
         {OFFSETS.map((value) => (
           <button
             key={value}

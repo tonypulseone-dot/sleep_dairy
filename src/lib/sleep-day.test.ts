@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   averageTotalSleep,
   composeSleep,
+  daySegments,
   DEFAULT_DAY_BOUNDARY,
   DEFAULT_NIGHT_FROM,
   durationMinutes,
@@ -155,4 +156,41 @@ test('ночь, начатая вечером, перешагивает полн
   assert.equal(sleepDayOf(startedAt, moscow), '2026-09-17');
   assert.equal(formatDuration(durationMinutes(startedAt, endedAt)), '9:40');
   assert.ok(endedAt > startedAt);
+});
+
+test('сны раскладываются по кругу от утренней границы', () => {
+  const segments = daySegments(
+    '2026-09-16',
+    [
+      { startedAt: msk('2026-09-16T10:00:00'), endedAt: msk('2026-09-16T11:20:00') },
+      { startedAt: msk('2026-09-17T00:30:00'), endedAt: msk('2026-09-17T07:00:00') },
+    ],
+    moscow,
+  );
+
+  // Утро в 06:00, значит сон в 10:00 начинается на 240-й минуте круга.
+  assert.deepEqual(segments[0], { from: 240, to: 320, kind: 'day', ongoing: false });
+  // Ночь с 00:30 — это 1110-я минута суток; конец подрезан по границе круга.
+  assert.equal(segments[1].from, 1110);
+  assert.equal(segments[1].to, 1440);
+  assert.equal(segments[1].kind, 'night');
+});
+
+test('идущий сон доходит до текущего момента', () => {
+  const segments = daySegments(
+    '2026-09-16',
+    [{ startedAt: msk('2026-09-16T14:00:00'), endedAt: null }],
+    moscow,
+    msk('2026-09-16T14:45:00'),
+  );
+  assert.deepEqual(segments[0], { from: 480, to: 525, kind: 'day', ongoing: true });
+});
+
+test('сон нулевой длины на круге не рисуется', () => {
+  const segments = daySegments(
+    '2026-09-16',
+    [{ startedAt: msk('2026-09-16T10:00:00'), endedAt: msk('2026-09-16T10:00:00') }],
+    moscow,
+  );
+  assert.equal(segments.length, 0);
 });

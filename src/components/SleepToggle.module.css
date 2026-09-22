@@ -1,63 +1,87 @@
-.wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 22px;
-}
-
-.status {
-  margin: 0;
-  font-size: 17px;
-  color: var(--text-muted);
-  min-height: 26px;
-  font-variant-numeric: tabular-nums;
-}
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 
 /*
- * Мишень для пальца в темноте, одной рукой, с ребёнком на другой.
+ * Мишень для пальца в темноте, одной рукой, с ребёнком на второй.
  * Круг, а не прямоугольник: в него легче попасть не глядя.
  */
 .big {
-  width: min(70vw, 260px);
+  width: 100%;
   aspect-ratio: 1;
   border-radius: 50%;
-  font-size: 25px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  transition: transform 120ms ease, filter 120ms ease;
-  -webkit-tap-highlight-color: transparent;
+  display: grid;
+  place-items: center;
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 
-.big:active { transform: scale(0.97); }
-.big:disabled { filter: saturate(0.6); cursor: default; }
-
-.sleep { background: var(--sleep); color: var(--sleep-ink); }
-.wake { background: var(--wake); color: var(--wake-ink); }
-
-.offsets {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
+.bigLabel {
+  font-family: var(--font-display);
+  font-size: clamp(21px, 6vw, 26px);
+  font-weight: 600;
+  letter-spacing: -.01em;
 }
 
-.offsetLabel {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-right: 2px;
+.big:active { transform: scale(.965); }
+.big:disabled { filter: saturate(.55); cursor: default; }
+
+.sleep {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-lift);
 }
+
+.wake {
+  background: var(--wake);
+  color: var(--wake-ink);
+  box-shadow: var(--shadow-lift);
+}
+
+/*
+ * Ночью кнопка не светит. Виктория про это говорила прямо: «в ночи очень
+ * в глаза светит белый свет». Залитый круг на пол-экрана — то же самое,
+ * поэтому в тёмной теме остаются обводка и подпись.
+ */
+:global(:root[data-theme='dark']) .sleep {
+  background: var(--night-soft);
+  color: var(--night-ink);
+  border: 2px solid var(--night);
+  box-shadow: none;
+}
+
+:global(:root[data-theme='dark']) .wake {
+  background: var(--day-soft);
+  color: var(--day-ink);
+  border: 2px solid var(--day);
+  box-shadow: none;
+}
+
+.status { text-align: center; min-height: 48px; display: flex; flex-direction: column; gap: 3px; }
+
+.elapsed {
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+
+.offsets { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+
+.offsetLabel { font-size: 13px; color: var(--ink-3); margin-right: 2px; }
 
 .offset {
   font-size: 13px;
-  color: var(--text-muted);
-  padding: 7px 11px;
+  color: var(--ink-3);
+  padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid transparent;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
 .offsetOn {
-  color: var(--text);
+  color: var(--ink);
   border-color: var(--line);
   background: var(--surface);
 }
+
+.fix { font-size: 13.5px; color: var(--day-ink); text-decoration: underline; text-underline-offset: 3px; }
