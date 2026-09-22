@@ -9,7 +9,6 @@ import {
   consultants,
   feedings,
   parents,
-  photoImports,
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
@@ -306,28 +305,6 @@ export async function revokeAccess(grantId: string) {
     .set({ revokedAt: new Date() })
     .where(eq(accessGrants.id, grantId));
   revalidatePath('/consultant');
-}
-
-/* ------------------------------------------------------------------ *
- * Фото в таблицу
- *
- * Функция, которую Виктория назвала бомбой: мама скидывает скриншот
- * дневника, записи вносятся сами. Разбор ещё не написан — пока
- * записываем только сам факт попытки, чтобы увидеть спрос в цифрах,
- * а не в ощущениях. Сами снимки не храним и никуда не отправляем.
- * ------------------------------------------------------------------ */
-
-export async function recordImportAttempt(fileCount: number) {
-  const { child } = await requireContext();
-  const count = Math.min(Math.max(Math.round(fileCount), 1), 50);
-
-  await db.insert(photoImports).values({
-    childId: child.id,
-    fileKey: null,
-    status: 'uploaded',
-    fileCount: count,
-    parseError: 'Разбор ещё не реализован',
-  });
 }
 
 /* ------------------------------------------------------------------ *

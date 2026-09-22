@@ -8,8 +8,16 @@ export async function POST(request: Request) {
     dev?: boolean;
   };
 
-  // Локальная разработка без Telegram: один и тот же тестовый родитель.
-  if (body.dev && process.env.NODE_ENV !== 'production') {
+  /*
+   * Вход без Telegram — только для локальной разработки.
+   *
+   * Раньше он открывался по одному лишь NODE_ENV. Это опасно: если
+   * приложение запустят не через наш образ и переменная не выставится,
+   * любой желающий получит чужую сессию одним запросом. Поэтому нужен
+   * ещё и явный ALLOW_DEV_LOGIN — забыть выставить его безопасно,
+   * забыть снять уже нет.
+   */
+  if (body.dev && process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_LOGIN === '1') {
     const parent = await upsertParent({ telegramId: 'dev-1', firstName: 'Разработка' });
     await setSessionCookie(parent.id);
     return NextResponse.json({ ok: true, dev: true, invite: null });
