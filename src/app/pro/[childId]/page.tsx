@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, children, parents, sleeps } from '@/db/schema';
+import { SleepChart, type ChartDay } from '@/components/SleepChart';
 import { currentConsultant } from '@/lib/pro-session';
 import {
   averageTotalSleep,
@@ -91,6 +92,16 @@ export default async function ClientCard({
     timeZone: 'UTC',
   });
 
+  // График читается слева направо от старых дней к свежим, как и любая динамика.
+  const chartDays: ChartDay[] = [...days].reverse().map((day) => ({
+    label: new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })
+      .format(new Date(`${day.sleepDay}T12:00:00Z`)),
+    title: new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+      .format(new Date(`${day.sleepDay}T12:00:00Z`)),
+    daySleep: day.daySleep,
+    nightSleep: day.nightSleep,
+  }));
+
   return (
     <main className={styles.screen}>
       <div className={styles.top}>
@@ -137,6 +148,8 @@ export default async function ClientCard({
           </Link>
         ))}
       </div>
+
+      <SleepChart days={chartDays} />
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>

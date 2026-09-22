@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createChild } from '@/app/actions';
+import { Moon } from './Moon';
 import styles from './Onboarding.module.css';
 
 /**
@@ -30,6 +31,9 @@ export function Onboarding() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Сначала приветствие, потом вопросы: Виктория описывала это именно так —
+  // «включаете приложение, что-то красивое высвечивается, потом идут вопросы».
+  const [step, setStep] = useState<'welcome' | 'form'>('welcome');
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -58,11 +62,27 @@ export function Onboarding() {
     });
   };
 
+  if (step === 'welcome') {
+    return (
+      <main className={styles.welcome}>
+        <Moon />
+        <h1 className={styles.welcomeTitle}>Добро пожаловать в сонное царство</h1>
+        <p className={styles.welcomeText}>
+          Здесь вы отмечаете сны малыша одной кнопкой. Ничего считать не нужно —
+          и ничего страшного, если какой-то сон вы пропустите.
+        </p>
+        <button type="button" className={styles.submit} onClick={() => setStep('form')}>
+          Начать
+        </button>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.screen}>
       <header className={styles.intro}>
-        <h1>Добро пожаловать в сонное царство</h1>
-        <p>Несколько вопросов о малыше — и можно вести дневник. Всё это потом можно изменить.</p>
+        <h1>Расскажите о малыше</h1>
+        <p>Три вопроса — и можно вести дневник. Всё это потом можно изменить.</p>
       </header>
 
       <form className={styles.form} onSubmit={submit}>

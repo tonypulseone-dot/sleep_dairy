@@ -31,6 +31,32 @@ interface Props {
   totals: DayTotalsView;
 }
 
+/**
+ * Значок рядом с цветом: тип сна не должен опознаваться одним лишь цветом —
+ * иначе строки неразличимы при дальтонизме и на чёрно-белом скриншоте,
+ * а Виктория как раз скринит дневник, объясняя что-то маме.
+ */
+function KindMark({ kind }: { kind: 'day' | 'night' }) {
+  return kind === 'night' ? (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20 14.2A8.4 8.4 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2Z"
+        fill="currentColor"
+      />
+    </svg>
+  ) : (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4.2" fill="currentColor" />
+      <path
+        d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 interface Draft {
   id: string | null;
   start: string;
@@ -123,7 +149,10 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
                 )
               }
             >
-              <span className={styles.rowKind}>{row.kind === 'night' ? 'Ночной' : 'Дневной'}</span>
+              <span className={styles.rowKind}>
+                <KindMark kind={row.kind} />
+                {row.kind === 'night' ? 'Ночной' : 'Дневной'}
+              </span>
               <span className={styles.rowTime}>
                 {row.start}
                 {row.end ? `–${row.end}` : ' — идёт'}
