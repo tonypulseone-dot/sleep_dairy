@@ -47,3 +47,40 @@
   font-size: 13px; padding: 7px 12px; border-radius: 999px;
   background: var(--nap-bg); color: var(--nap-ink);
 }
+
+.drop:disabled { opacity: 0.55; cursor: default; }
+
+.day {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line);
+}
+
+.dayHead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dayHead input { width: auto; flex: 1 1 160px; }
+.dayText { font-size: 12.5px; color: var(--text-muted); }
+.dayError { margin: 0; font-size: 13.5px; color: var(--text-muted); }
+
+.row { display: flex; flex-direction: column; gap: 4px; }
+.rowTimes { display: flex; align-items: center; gap: 8px; }
+.rowTimes input { flex: 1; min-width: 0; }
+.dash { color: var(--text-muted); }
+
+.rowWarn .rowTimes input { border-color: var(--wake); }
+.warn { font-size: 12.5px; color: var(--wake); }
+
+.dropRow {
+  width: 40px; height: 44px; flex: none;
+  color: var(--text-muted); font-size: 16px;
+}
+
+.savedNote { margin: 0; font-size: 14px; color: var(--text-muted); }
+
+.ghost {
+  min-height: var(--tap); border-radius: 14px;
+  border: 1px solid var(--line); color: var(--text);
+  font-size: 15px; text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.error { color: #C0463A; font-size: 14px; margin: 0; }
