@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:runtime": "esbuild migrate=src/db/migrate.ts bot=src/bot/index.ts seed-norms=scripts/seed-norms.ts seed-activities=scripts/seed-activities.ts seed-consultant=scripts/seed-consultant.ts --bundle --platform=node --target=node22 --format=cjs --outdir=runtime --out-extension:.js=.cjs --external:pg-native --log-level=warning",
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test src/**/*.test.ts",
@@ -38,6 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.25.12",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tsx": "^4.23.13",

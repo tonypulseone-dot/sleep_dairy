@@ -76,15 +76,15 @@ LEGAL_HOSTING=    # провайдер и город, где стоит серв
 активности по возрастам загружаются отдельно:
 
 ```bash
-docker compose exec app ./node_modules/.bin/tsx scripts/seed-norms.ts
-docker compose exec app ./node_modules/.bin/tsx scripts/seed-activities.ts
+docker compose exec app node runtime/seed-norms.cjs
+docker compose exec app node runtime/seed-activities.cjs
 ```
 
 Консультант заводится тем же способом — регистрация пока закрыта:
 
 ```bash
-docker compose exec app ./node_modules/.bin/tsx \
-  scripts/seed-consultant.ts viktoria@example.com «пароль» «Виктория» viktoria
+docker compose exec app node runtime/seed-consultant.cjs \
+  viktoria@example.com "пароль" "Виктория" viktoria
 ```
 
 Кабинет после этого доступен по адресу `https://ваш-домен/pro`.
