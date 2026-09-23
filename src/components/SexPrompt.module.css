@@ -1,0 +1,13 @@
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.text { margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--ink); }
+.buttons { display: flex; gap: 8px; }
+.choice {
+  flex: 1; min-height: 44px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--ink); font-size: 15px;
+}
+.choice:disabled { opacity: .6; cursor: default; }

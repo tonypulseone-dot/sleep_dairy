@@ -4,6 +4,7 @@ import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { rhythmNorms, sleeps } from '@/db/schema';
 import { IconSettings } from '@/components/Icons';
+import { SexPrompt } from '@/components/SexPrompt';
 import { SleepToggle } from '@/components/SleepToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TelegramBoot } from '@/components/TelegramBoot';
@@ -145,6 +146,8 @@ export default async function Home() {
         </div>
       </header>
 
+      {child.sex === null && <SexPrompt name={child.name} />}
+
       {support && <p className={styles.support}>{support}</p>}
 
       <div className={styles.stage}>
@@ -156,6 +159,7 @@ export default async function Home() {
           nowMinutes={nowMinutes}
           hint={hintText}
           stale={stale}
+          sex={child.sex}
         />
       </div>
 

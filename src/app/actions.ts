@@ -12,6 +12,7 @@ import {
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
+import type { ChildSex } from '@/lib/words';
 import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
 import {
   composeSleep,
@@ -93,6 +94,7 @@ export async function stopSleep(minutesAgo = 0) {
 
 export interface OnboardingInput {
   name: string;
+  sex: ChildSex;
   birthDate: string;
   dueDate?: string | null;
   isPreterm: boolean;
@@ -108,6 +110,7 @@ export async function createChild(input: OnboardingInput) {
 
   const name = input.name.trim();
   if (!name) throw new Error('Не заполнено имя');
+  if (input.sex !== 'boy' && input.sex !== 'girl') throw new Error('Выберите, мальчик или девочка');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) throw new Error('Не заполнена дата рождения');
 
   const [created] = await db
@@ -115,6 +118,7 @@ export async function createChild(input: OnboardingInput) {
     .values({
       parentId: parent.id,
       name,
+      sex: input.sex,
       birthDate: input.birthDate,
       dueDate: input.isPreterm ? (input.dueDate || null) : null,
       isPreterm: input.isPreterm,
@@ -247,6 +251,14 @@ async function recomputeSleepDays(childId: string, window: DayWindow) {
       await db.update(sleeps).set({ sleepDay, kind }).where(eq(sleeps.id, row.id));
     }
   }
+}
+
+/** Мальчик или девочка — для детей, заведённых до появления этого вопроса. */
+export async function setChildSex(sex: ChildSex) {
+  if (sex !== 'boy' && sex !== 'girl') throw new Error('Выберите, мальчик или девочка');
+  const { child } = await requireContext();
+  await db.update(children).set({ sex }).where(eq(children.id, child.id));
+  revalidatePath('/', 'layout');
 }
 
 export async function setThemePref(pref: 'auto' | 'light' | 'dark') {

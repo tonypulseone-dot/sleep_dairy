@@ -22,6 +22,8 @@ export const sleepKind = pgEnum('sleep_kind', ['day', 'night']);
 export const entrySource = pgEnum('entry_source', ['timer', 'manual', 'photo']);
 /** Кормление отмечают только на искусственном и смешанном — грудное не считаем. */
 export const feedingType = pgEnum('feeding_type', ['breast', 'formula', 'mixed']);
+/** Нужен только для грамматики: «уснул» или «уснула». */
+export const childSex = pgEnum('child_sex', ['boy', 'girl']);
 export const themePref = pgEnum('theme_pref', ['auto', 'light', 'dark']);
 export const plan = pgEnum('plan', ['trial', 'practice', 'flow']);
 export const showcaseStatus = pgEnum('showcase_status', ['hidden', 'pending', 'published', 'rejected']);
@@ -95,6 +97,8 @@ export const children = pgTable(
       .references(() => parents.id, { onDelete: 'cascade' }),
 
     name: text('name').notNull(),
+    /** Пусто у детей, заведённых до появления вопроса, — тогда спросим на главном. */
+    sex: childSex('sex'),
     birthDate: date('birth_date').notNull(),
     /** ПДР — для скорректированного возраста недоношенных. */
     dueDate: date('due_date'),

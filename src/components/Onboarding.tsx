@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createChild } from '@/app/actions';
+import { childWords, type ChildSex } from '@/lib/words';
 import { Moon } from './Moon';
 import styles from './Onboarding.module.css';
 
@@ -21,6 +22,11 @@ const TEMPERAMENT = [
   'Плохо переносит смену обстановки',
 ];
 
+const SEX = [
+  { value: 'girl', label: 'Девочка' },
+  { value: 'boy', label: 'Мальчик' },
+] as const;
+
 const FEEDING = [
   { value: 'breast', label: 'Грудное' },
   { value: 'formula', label: 'Искусственное' },
@@ -37,6 +43,7 @@ export function Onboarding() {
   const [step, setStep] = useState<'welcome' | 'form'>('welcome');
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
+  const [sex, setSex] = useState<ChildSex | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [isPreterm, setIsPreterm] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -52,9 +59,13 @@ export function Onboarding() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!sex) {
+      setError('Выберите, мальчик или девочка');
+      return;
+    }
     startTransition(async () => {
       try {
-        await createChild({ name, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType });
+        await createChild({ name, sex, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType });
         router.replace('/');
         router.refresh();
       } catch (cause) {
@@ -83,7 +94,7 @@ export function Onboarding() {
     <main className={styles.screen}>
       <header className={styles.intro}>
         <h1>Расскажите о малыше</h1>
-        <p>Три вопроса — и можно вести дневник. Всё это потом можно изменить.</p>
+        <p>Несколько коротких вопросов — и можно вести дневник. Всё это потом можно изменить.</p>
       </header>
 
       <form className={styles.form} onSubmit={submit}>
@@ -92,6 +103,24 @@ export function Onboarding() {
           <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
         </label>
 
+        {/* Только для грамматики: «уснул» или «уснула» на главной кнопке. */}
+        <fieldset className={styles.field}>
+          <legend className={styles.label}>Мальчик или девочка</legend>
+          <div className={styles.chips}>
+            {SEX.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={sex === option.value}
+                onClick={() => setSex(option.value)}
+                className={`${styles.chip} ${sex === option.value ? styles.chipOn : ''}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label className={styles.field}>
           <span className={styles.label}>Дата рождения</span>
           <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
@@ -99,7 +128,7 @@ export function Onboarding() {
 
         <label className={styles.checkbox}>
           <input type="checkbox" checked={isPreterm} onChange={(e) => setIsPreterm(e.target.checked)} />
-          <span>Родился раньше срока</span>
+          <span>{childWords(sex).born} раньше срока</span>
         </label>
 
         {isPreterm && (

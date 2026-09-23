@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { startSleep, stopSleep } from '@/app/actions';
 import { SleepRing } from './SleepRing';
 import type { DaySegment } from '@/lib/sleep-day';
+import { childWords, type ChildSex } from '@/lib/words';
 import styles from './SleepToggle.module.css';
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
   hint: string | null;
   /** Сон идёт неправдоподобно долго: похоже, забыли отметить пробуждение. */
   stale: boolean;
+  sex: ChildSex | null;
 }
 
 /** 72 → «1 ч 12 мин». Для мамы, а не для таблицы. */
@@ -40,7 +42,9 @@ export function SleepToggle({
   nowMinutes,
   hint,
   stale,
+  sex,
 }: Props) {
+  const words = childWords(sex);
   const isSleeping = sleepingSince !== null;
   const since = sleepingSince ?? awakeSince;
 
@@ -79,7 +83,7 @@ export function SleepToggle({
           disabled={pending}
           className={`${styles.big} ${isSleeping ? styles.wake : styles.sleep}`}
         >
-          <span className={styles.bigLabel}>{isSleeping ? 'Проснулся' : 'Уснул'}</span>
+          <span className={styles.bigLabel}>{isSleeping ? words.wokeUp : words.fellAsleep}</span>
         </button>
       </SleepRing>
 
@@ -113,7 +117,7 @@ export function SleepToggle({
       </div>
 
       <div className={styles.offsets} role="group" aria-label="Когда это случилось">
-        <span className={styles.offsetLabel}>{isSleeping ? 'проснулся' : 'уснул'}</span>
+        <span className={styles.offsetLabel}>{(isSleeping ? words.wokeUp : words.fellAsleep).toLowerCase()}</span>
         {OFFSETS.map((value) => (
           <button
             key={value}

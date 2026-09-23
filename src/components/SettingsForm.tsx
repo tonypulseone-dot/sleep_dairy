@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteEverything, setThemePref, updateDayWindow } from '@/app/actions';
+import { deleteEverything, setChildSex, setThemePref, updateDayWindow } from '@/app/actions';
+import type { ChildSex } from '@/lib/words';
 import { applyTheme } from '@/lib/telegram-client';
 import { resolveTheme, type ThemePref } from '@/lib/theme';
 import { parseTimeOfDay } from '@/lib/sleep-day';
@@ -40,6 +41,8 @@ interface Props {
   nightFrom: string;
   timeZone: string;
   themePref: 'auto' | 'light' | 'dark';
+  childName: string;
+  sex: ChildSex | null;
 }
 
 export function SettingsForm(props: Props) {
@@ -58,6 +61,19 @@ export function SettingsForm(props: Props) {
   const [nightFrom, setNightFrom] = useState(props.nightFrom);
   const [timeZone, setTimeZone] = useState(props.timeZone);
   const [theme, setTheme] = useState(props.themePref);
+  const [sex, setSex] = useState<ChildSex | null>(props.sex);
+
+  const chooseSex = (value: ChildSex) => {
+    setSex(value);
+    startTransition(async () => {
+      try {
+        await setChildSex(value);
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
+      }
+    });
+  };
 
   const zones = ZONES.some(([value]) => value === timeZone)
     ? ZONES
@@ -138,6 +154,29 @@ export function SettingsForm(props: Props) {
               aria-pressed={theme === value}
               onClick={() => chooseTheme(value)}
               className={`${styles.chip} ${theme === value ? styles.chipOn : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.block}>
+        <h2>{props.childName}</h2>
+        <p className={styles.hint}>Чтобы писать «уснул» или «уснула».</p>
+        <div className={styles.chips}>
+          {(
+            [
+              ['girl', 'Девочка'],
+              ['boy', 'Мальчик'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={sex === value}
+              onClick={() => chooseSex(value)}
+              className={`${styles.chip} ${sex === value ? styles.chipOn : ''}`}
             >
               {label}
             </button>

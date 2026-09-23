@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
 import { IconBack, IconForward } from './Icons';
+import { childWords, type ChildSex } from '@/lib/words';
 
 export interface DayRow {
   id: string;
@@ -30,6 +31,7 @@ interface Props {
   nextDay: string | null;
   rows: DayRow[];
   totals: DayTotalsView;
+  sex: ChildSex | null;
 }
 
 /**
@@ -64,7 +66,8 @@ interface Draft {
   end: string;
 }
 
-export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Props) {
+export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }: Props) {
+  const words = childWords(sex);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -163,6 +166,7 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
 
             {draft?.id === row.id && (
               <Editor
+                words={words}
                 draft={draft}
                 pending={pending}
                 onChange={setDraft}
@@ -179,6 +183,7 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
 
       {draft && draft.id === null ? (
         <Editor
+                words={words}
           draft={draft}
           pending={pending}
           onChange={setDraft}
@@ -204,6 +209,7 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
 }
 
 function Editor({
+  words,
   draft,
   pending,
   onChange,
@@ -211,6 +217,7 @@ function Editor({
   onCancel,
   onDelete,
 }: {
+  words: ReturnType<typeof childWords>;
   draft: Draft;
   pending: boolean;
   onChange: (draft: Draft) => void;
@@ -222,7 +229,7 @@ function Editor({
     <div className={styles.editor}>
       <div className={styles.times}>
         <label className={styles.timeField}>
-          <span>Уснул</span>
+          <span>{words.fellAsleep}</span>
           <input
             type="time"
             value={draft.start}
@@ -230,7 +237,7 @@ function Editor({
           />
         </label>
         <label className={styles.timeField}>
-          <span>Проснулся</span>
+          <span>{words.wokeUp}</span>
           <input
             type="time"
             value={draft.end}

@@ -14,6 +14,7 @@ import {
   type DayTotals,
   type DayWindow,
 } from '@/lib/sleep-day';
+import { childWords } from '@/lib/words';
 import styles from '@/components/Pro.module.css';
 
 const PERIODS = [5, 7, 10, 14] as const;
@@ -108,7 +109,7 @@ export default async function ClientCard({
         <div className={styles.card}>
           <span className={styles.cardName}>{child.name}</span>
           <span className={styles.cardMeta}>
-            {child.isPreterm ? 'родился раньше срока' : 'доношенный'}
+            {child.isPreterm ? childWords(child.sex).preterm : childWords(child.sex).fullTerm}
             {child.feedingType === 'formula'
               ? ' · искусственное вскармливание'
               : child.feedingType === 'mixed'

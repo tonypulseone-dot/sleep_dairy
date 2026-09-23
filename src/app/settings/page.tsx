@@ -17,6 +17,8 @@ export default async function SettingsPage() {
       nightFrom={formatTimeOfDay(child.nightFromMinutes)}
       timeZone={parent.timeZone}
       themePref={parent.themePref}
+      childName={child.name}
+      sex={child.sex}
     />
   );
 }

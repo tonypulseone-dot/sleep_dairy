@@ -89,6 +89,7 @@ export default async function DayPage({
         totalWake: formatDuration(totals.totalWake),
         napCount: totals.napCount,
       }}
+      sex={child.sex}
     />
   );
 }
