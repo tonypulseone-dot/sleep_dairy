@@ -58,14 +58,19 @@ export default async function ProHome() {
     )
     .orderBy(desc(accessGrants.grantedAt));
 
-  // Ссылка через /start, а не прямая t.me/бот/app?startapp=: прямая работает,
-  // только если мини-приложение отдельно зарегистрировано в BotFather через
-  // /newapp, а без этого мама получила бы «приложение не найдено». /start
-  // бот понимает сам и отвечает кнопкой, открывающей экран согласия.
+  // Два вида ссылки. Прямая t.me/бот/app?startapp= открывает приложение
+  // сразу, но работает, только если оно заведено в BotFather через /newapp —
+  // иначе мама получит «приложение не найдено». Поэтому прямая включается
+  // коротким именем из /newapp, а по умолчанию ссылка идёт через /start,
+  // на который бот отвечает кнопкой на экран согласия. Прямая нужна там,
+  // где бот работать не может: с сервера не открывается api.telegram.org.
   const botName = process.env.TELEGRAM_BOT_USERNAME;
-  const inviteLink = botName
-    ? `https://t.me/${botName}?start=${consultant.slug}`
-    : `${process.env.APP_URL ?? ''}/connect?c=${consultant.slug}`;
+  const appShortName = process.env.TELEGRAM_APP_SHORT_NAME;
+  const inviteLink = !botName
+    ? `${process.env.APP_URL ?? ''}/connect?c=${consultant.slug}`
+    : appShortName
+      ? `https://t.me/${botName}/${appShortName}?startapp=${consultant.slug}`
+      : `https://t.me/${botName}?start=${consultant.slug}`;
 
   return (
     <main className={styles.screen}>

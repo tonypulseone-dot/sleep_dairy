@@ -78,19 +78,40 @@ TOKEN=$(printf '%s' "$TOKEN" | tr -d '[:space:]')
 [[ $TOKEN =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]] \
   || die "Это не похоже на токен бота. Он выглядит так: 123456789:AAH4b..."
 
-# Заодно проверяем, что Telegram с этого сервера вообще доступен: без этого
-# бот не получит ни одного сообщения, и ставить дальше нет смысла.
-ME=$(curl -sS --max-time 20 -w $'\n%{http_code}' "https://api.telegram.org/bot$TOKEN/getMe" 2>/dev/null || printf '\n000')
-CODE=${ME##*$'\n'}
-ME=${ME%$'\n'*}
+# С российских серверов api.telegram.org открывается не всегда. Самому
+# приложению он не нужен: вход мамы проверяется подписью, которую Telegram
+# кладёт в приложение, без единого запроса наружу. Без него не работает
+# только процесс-бот — его роль тогда берут на себя настройки в BotFather.
+getme() {
+  local code
+  code=$(curl "$@" -sS -o /tmp/tg-getme.json -w '%{http_code}' --max-time 15 \
+    "https://api.telegram.org/bot$TOKEN/getMe" 2>/dev/null || true)
+  printf '%s' "${code:-000}"
+}
+TG_OK=''
+CODE=$(getme)
+# Частая причина «не отвечает» — сломанный маршрут по IPv6 при рабочем IPv4.
+[ "$CODE" != 000 ] || CODE=$(getme -4)
 case "$CODE" in
-  200) ;;
-  401|404) die "Telegram не узнал этот токен. Скопируйте его из @BotFather ещё раз." ;;
-  *) die "Сервер не может достучаться до api.telegram.org (код $CODE). Бот так работать не будет — это вопрос к поддержке хостинга." ;;
+  200)
+    TG_OK=1
+    BOT=$(sed -n 's/.*"username":"\([^"]*\)".*/\1/p' /tmp/tg-getme.json)
+    [ -n "$BOT" ] || die "Telegram ответил неожиданно: $(cat /tmp/tg-getme.json)"
+    ok "Бот @$BOT на связи"
+    ;;
+  401|404)
+    die "Telegram не узнал этот токен. Скопируйте его из @BotFather ещё раз."
+    ;;
+  *)
+    warn "С этого сервера не открывается api.telegram.org (код $CODE) — в России так бывает."
+    warn "Приложению это не мешает. Бот-помощник работать не будет, его заменят"
+    warn "две настройки в @BotFather — инструкция появится в конце установки."
+    ask BOT "Имя бота без @, например son_diary_bot"
+    BOT=${BOT#@}
+    [[ $BOT =~ ^[A-Za-z0-9_]{5,32}$ ]] || die "Имя бота — латиница, цифры и подчёркивание, как в @BotFather."
+    warn "Проверить токен отсюда нельзя — скопируйте его из @BotFather без ошибок."
+    ;;
 esac
-BOT=$(printf '%s' "$ME" | sed -n 's/.*"username":"\([^"]*\)".*/\1/p')
-[ -n "$BOT" ] || die "Telegram ответил неожиданно: $ME"
-ok "Бот @$BOT на связи"
 
 # --------------------------------------------------------------------- 2
 bold "2/7 · Домен"
@@ -189,6 +210,10 @@ cd "$DIR"
 PG_PASS=$(env_value POSTGRES_PASSWORD);  [ -n "$PG_PASS" ] || PG_PASS=$(openssl rand -hex 32)
 SESSION=$(env_value SESSION_SECRET);     [ -n "$SESSION" ] || SESSION=$(openssl rand -hex 32)
 ANTHROPIC=$(env_value ANTHROPIC_API_KEY)
+# Прямые ссылки t.me/бот/app работают, только если мини-приложение заведено
+# в BotFather через /newapp. Без бота это единственный способ пригласить маму.
+APP_SHORT=$(env_value TELEGRAM_APP_SHORT_NAME)
+[ -n "$APP_SHORT" ] || [ -n "$TG_OK" ] || APP_SHORT=app
 L_OPERATOR=$(env_value LEGAL_OPERATOR)
 L_INN=$(env_value LEGAL_INN)
 L_EMAIL=$(env_value LEGAL_EMAIL)
@@ -199,6 +224,9 @@ cat > .env <<EOF
 APP_DOMAIN=$DOMAIN
 TELEGRAM_BOT_TOKEN=$TOKEN
 TELEGRAM_BOT_USERNAME=$BOT
+# Короткое имя мини-приложения из BotFather (/newapp). Пусто — приглашения
+# идут через бота: t.me/бот?start=...
+TELEGRAM_APP_SHORT_NAME=$APP_SHORT
 
 POSTGRES_PASSWORD=$PG_PASS
 SESSION_SECRET=$SESSION
@@ -230,7 +258,10 @@ fi
 # --------------------------------------------------------------------- 6
 bold "6/7 · Сборка и запуск"
 echo "  Самый долгий шаг, обычно 5–10 минут. Ход сборки пишется в $LOG"
-if ! docker compose up -d --build >>"$LOG" 2>&1; then
+# Без доступа к Telegram бот только падал бы и перезапускался по кругу.
+SCALE=()
+[ -n "$TG_OK" ] || SCALE=(--scale bot=0)
+if ! docker compose up -d --build "${SCALE[@]}" >>"$LOG" 2>&1; then
   tail -n 30 "$LOG" >&2
   die "Сборка или запуск не удались. Полный журнал: $LOG — пришлите его."
 fi
@@ -263,20 +294,43 @@ run runtime/seed-consultant.cjs "$C_EMAIL" "$C_PASS" "$C_NAME" "$C_SLUG" \
   && ok "Кабинет для «$C_NAME» заведён" \
   || die "Не получилось завести кабинет консультанта, см. $LOG"
 
-sleep 3
-if docker compose ps --status running --services 2>/dev/null | grep -qx bot; then
-  ok "Бот работает"
+if [ -n "$TG_OK" ]; then
+  sleep 3
+  if docker compose ps --status running --services 2>/dev/null | grep -qx bot; then
+    ok "Бот работает"
+  else
+    warn "Бот не запустился: docker compose logs bot"
+  fi
+fi
+
+if [ -n "$APP_SHORT" ]; then
+  INVITE="https://t.me/$BOT/$APP_SHORT?startapp=$C_SLUG"
 else
-  warn "Бот не запустился: docker compose logs bot"
+  INVITE="https://t.me/$BOT?start=$C_SLUG"
 fi
 
 bold "Готово"
+if [ -z "$TG_OK" ]; then
 cat <<EOF
 
-  Мини-приложение     откройте @$BOT в Telegram → «Запустить» → «Открыть дневник»
+  Осталось две настройки в @BotFather — без них мини-приложение не откроется:
+
+  1. Кнопка в чате с ботом
+     /mybots → @$BOT → Bot Settings → Menu Button
+     адрес: https://$DOMAIN     название: Дневник
+
+  2. Прямые ссылки для приглашений
+     /newapp → @$BOT → название «Дневник сна» → короткое описание
+     → картинка 640×360 → GIF: /empty
+     → адрес: https://$DOMAIN   → короткое имя: $APP_SHORT
+EOF
+fi
+cat <<EOF
+
+  Мини-приложение     откройте @$BOT в Telegram → кнопка «Дневник» внизу
   Кабинет консультанта https://$DOMAIN/pro
                        вход: $C_EMAIL и пароль, который вы ввели
-  Приглашение для мам https://t.me/$BOT?start=$C_SLUG
+  Приглашение для мам $INVITE
 
   До того как звать живых мам, заполните реквизиты в $DIR/.env
   (строки LEGAL_*) и выполните: cd $DIR && docker compose up -d
