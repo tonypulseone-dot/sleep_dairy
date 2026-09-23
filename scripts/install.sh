@@ -18,6 +18,12 @@
 #
 # Необязательные: SD_NAME (по умолчанию «Виктория»), SD_SLUG («viktoria»).
 
+# Весь скрипт — в фигурных скобках. При запуске через `curl | bash` bash
+# читает скрипт из того же канала, что служит stdin для каждой команды,
+# и apt-get или установщик Docker молча съедали бы его продолжение: bash
+# продолжал бы с середины строки. Скобки заставляют прочитать всё целиком
+# до первой команды.
+{
 set -euo pipefail
 
 REPO_URL="https://github.com/tonypulseone-dot/sleep_dairy.git"
@@ -169,7 +175,7 @@ if printf '%s' "$DOMAIN" | LC_ALL=C grep -q '[^ -~]'; then
 fi
 DOMAIN=$(printf '%s' "$DOMAIN" | tr '[:upper:]' '[:lower:]')
 
-DNS_IP=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}')
+DNS_IP=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}' || true)
 [ -n "$DNS_IP" ] || die "Домен $DOMAIN пока никуда не указывает. Проверьте A-запись и подождите 10–30 минут."
 MY_IP=$(curl -4 -fsS --max-time 10 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
 if [ "$DNS_IP" = "$MY_IP" ]; then
@@ -179,7 +185,8 @@ else
   warn "Если это ошибка, сертификат не выпустится и мини-приложение не откроется."
   confirm "Всё равно продолжить?" || die "Остановились. Поправьте A-запись и запустите заново."
 fi
-if getent ahostsv6 "$DOMAIN" | grep -q .; then
+# Без AAAA-записи getent отдаёт IPv4-адрес в виде ::ffff:… — это не IPv6.
+if getent ahostsv6 "$DOMAIN" | grep -v '::ffff:' | grep -q .; then
   warn "У домена есть AAAA-запись (IPv6). Если сервер не отвечает по IPv6, сертификат может не выпуститься — лучше её удалить."
 fi
 
@@ -198,28 +205,33 @@ echo "  Вопросов больше не будет. Дальше можно �
 # --------------------------------------------------------------------- 4
 bold "4/7 · Docker"
 export DEBIAN_FRONTEND=noninteractive
+# needrestart в Ubuntu после установки пакетов спрашивает, какие службы
+# перезапустить, и ждёт ответа — в установке без вопросов это зависание.
+export NEEDRESTART_MODE=a
+# На свежем сервере в первые минуты работают автообновления и держат
+# блокировку apt: ждём её до пяти минут, а не падаем.
 : > "$LOG"
-apt-get update -qq >>"$LOG" 2>&1 || warn "apt-get update завершился с ошибкой, пробуем дальше"
-apt-get install -y -qq git curl ca-certificates openssl >>"$LOG" 2>&1 || die "Не получилось поставить git. Подробности: $LOG"
+apt-get -o DPkg::Lock::Timeout=300 update -qq </dev/null >>"$LOG" 2>&1 || warn "apt-get update завершился с ошибкой, пробуем дальше"
+apt-get -o DPkg::Lock::Timeout=300 install -y -qq git curl ca-certificates openssl </dev/null >>"$LOG" 2>&1 || die "Не получилось поставить git. Подробности: $LOG"
 
 if ! command -v docker >/dev/null 2>&1; then
   if curl -fsSL --max-time 30 https://get.docker.com -o /tmp/get-docker.sh 2>>"$LOG" \
-     && sh /tmp/get-docker.sh >>"$LOG" 2>&1; then
+     && sh /tmp/get-docker.sh </dev/null >>"$LOG" 2>&1; then
     ok "Docker установлен с сайта Docker"
   else
     warn "Сайт Docker недоступен, ставим из репозитория Ubuntu"
-    apt-get install -y -qq docker.io >>"$LOG" 2>&1 || die "Не получилось поставить Docker. Подробности: $LOG"
+    apt-get -o DPkg::Lock::Timeout=300 install -y -qq docker.io </dev/null >>"$LOG" 2>&1 || die "Не получилось поставить Docker. Подробности: $LOG"
   fi
 fi
-systemctl enable --now docker >>"$LOG" 2>&1 || true
+systemctl enable --now docker </dev/null >>"$LOG" 2>&1 || true
 if ! docker compose version >/dev/null 2>&1; then
-  apt-get install -y -qq docker-compose-v2 >>"$LOG" 2>&1 \
-    || apt-get install -y -qq docker-compose-plugin >>"$LOG" 2>&1 \
+  apt-get -o DPkg::Lock::Timeout=300 install -y -qq docker-compose-v2 </dev/null >>"$LOG" 2>&1 \
+    || apt-get -o DPkg::Lock::Timeout=300 install -y -qq docker-compose-plugin </dev/null >>"$LOG" 2>&1 \
     || die "Не получилось поставить docker compose. Подробности: $LOG"
 fi
 ok "$(docker --version)"
 
-hub_ok() { timeout 120 docker pull -q hello-world >>"$LOG" 2>&1; }
+hub_ok() { timeout 120 docker pull -q hello-world </dev/null >>"$LOG" 2>&1; }
 if hub_ok; then
   ok "Docker Hub доступен"
 else
@@ -306,7 +318,7 @@ echo "  Самый долгий шаг, обычно 5–10 минут. Ход �
 # Без доступа к Telegram бот только падал бы и перезапускался по кругу.
 SCALE=()
 [ -n "$TG_OK" ] || SCALE=(--scale bot=0)
-if ! docker compose up -d --build "${SCALE[@]}" >>"$LOG" 2>&1; then
+if ! docker compose up -d --build "${SCALE[@]}" </dev/null >>"$LOG" 2>&1; then
   tail -n 30 "$LOG" >&2
   die "Сборка или запуск не удались. Полный журнал: $LOG — пришлите его."
 fi
@@ -332,7 +344,7 @@ fi
 
 # --------------------------------------------------------------------- 7
 bold "7/7 · Наполнение"
-run() { docker compose exec -T app node "$@" >>"$LOG" 2>&1; }
+run() { docker compose exec -T app node "$@" </dev/null >>"$LOG" 2>&1; }
 run runtime/seed-norms.cjs      && ok "Таблица режимов загружена"            || warn "Таблица режимов не загрузилась, см. $LOG"
 run runtime/seed-activities.cjs && ok "Активности загружены (черновик)"      || warn "Активности не загрузились, см. $LOG"
 run runtime/seed-consultant.cjs "$C_EMAIL" "$C_PASS" "$C_NAME" "$C_SLUG" \
@@ -381,3 +393,6 @@ cat <<EOF
   (строки LEGAL_*) и выполните: cd $DIR && docker compose up -d
 
 EOF
+
+exit 0
+}
