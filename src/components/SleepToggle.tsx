@@ -116,19 +116,36 @@ export function SleepToggle({
         )}
       </div>
 
-      <div className={styles.offsets} role="group" aria-label="Когда это случилось">
-        <span className={styles.offsetLabel}>{(isSleeping ? words.wokeUp : words.fellAsleep).toLowerCase()}</span>
-        {OFFSETS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={offset === value}
-            onClick={() => setOffset(value)}
-            className={`${styles.offset} ${offset === value ? styles.offsetOn : ''}`}
-          >
-            {value === 0 ? 'сейчас' : `−${value}`}
-          </button>
-        ))}
+      {/*
+        «−5» без пояснений читался как загадка. Теперь вопрос задан словами,
+        а варианты — сегментами одной ширины: «сейчас» или «N мин назад».
+        Выбор действует на следующее нажатие большой кнопки и сбрасывается.
+      */}
+      <div className={styles.when}>
+        <span className={styles.whenLabel} id="when-label">
+          Когда {(isSleeping ? words.wokeUp : words.fellAsleep).toLowerCase()}?
+        </span>
+        <div className={styles.offsets} role="group" aria-labelledby="when-label">
+          {OFFSETS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={offset === value}
+              aria-label={value === 0 ? 'Сейчас' : `${value} минут назад`}
+              onClick={() => setOffset(value)}
+              className={`${styles.offset} ${offset === value ? styles.offsetOn : ''}`}
+            >
+              {value === 0 ? (
+                'сейчас'
+              ) : (
+                <>
+                  <span className={styles.offsetMain}>{value} мин</span>
+                  <span className={styles.offsetSub}>назад</span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
