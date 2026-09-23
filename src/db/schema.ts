@@ -39,7 +39,7 @@ export const consultants = pgTable(
     /** scrypt: соль и хеш. Пароль в открытом виде не хранится нигде. */
     passwordHash: text('password_hash').notNull(),
     name: text('name').notNull(),
-    /** Хвост личной ссылки-приглашения: t.me/bot/app?startapp=<slug> */
+    /** Хвост личной ссылки-приглашения: t.me/<бот>?start=<slug> */
     slug: text('slug').notNull(),
     telegramId: text('telegram_id'),
     phone: text('phone'),

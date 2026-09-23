@@ -28,7 +28,7 @@ async function main() {
       .update(consultants)
       .set({ passwordHash: hashPassword(password), name, slug })
       .where(eq(consultants.id, existing.id));
-    console.log(`Обновлён консультант ${email}, ссылка: ?startapp=${slug}`);
+    console.log(`Обновлён консультант ${email}, ссылка: ?start=${slug}`);
   } else {
     await db.insert(consultants).values({
       email: email.toLowerCase(),
@@ -36,7 +36,7 @@ async function main() {
       name,
       slug,
     });
-    console.log(`Заведён консультант ${email}, ссылка: ?startapp=${slug}`);
+    console.log(`Заведён консультант ${email}, ссылка: ?start=${slug}`);
   }
 
   process.exit(0);

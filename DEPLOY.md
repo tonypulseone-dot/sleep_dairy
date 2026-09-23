@@ -88,7 +88,8 @@ docker compose exec app node runtime/seed-consultant.cjs \
 ```
 
 Кабинет после этого доступен по адресу `https://ваш-домен/pro`.
-Ссылка-приглашение для мам: `https://t.me/имя_бота/app?startapp=viktoria`.
+Ссылка-приглашение для мам: `https://t.me/имя_бота?start=viktoria` — она же
+показана Виктории в кабинете.
 
 ## Обновление
 

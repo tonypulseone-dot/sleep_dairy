@@ -58,9 +58,13 @@ export default async function ProHome() {
     )
     .orderBy(desc(accessGrants.grantedAt));
 
+  // Ссылка через /start, а не прямая t.me/бот/app?startapp=: прямая работает,
+  // только если мини-приложение отдельно зарегистрировано в BotFather через
+  // /newapp, а без этого мама получила бы «приложение не найдено». /start
+  // бот понимает сам и отвечает кнопкой, открывающей экран согласия.
   const botName = process.env.TELEGRAM_BOT_USERNAME;
   const inviteLink = botName
-    ? `https://t.me/${botName}/app?startapp=${consultant.slug}`
+    ? `https://t.me/${botName}?start=${consultant.slug}`
     : `${process.env.APP_URL ?? ''}/connect?c=${consultant.slug}`;
 
   return (
