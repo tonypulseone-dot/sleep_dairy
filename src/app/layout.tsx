@@ -3,6 +3,8 @@ import Script from 'next/script';
 import { currentChild, currentParent } from '@/lib/session';
 import { DEFAULT_DAY_BOUNDARY, DEFAULT_NIGHT_FROM } from '@/lib/sleep-day';
 import { resolveTheme } from '@/lib/theme';
+import { THEME_BG } from '@/lib/telegram-client';
+import { TelegramChrome } from '@/components/TelegramChrome';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,10 +38,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&family=JetBrains+Mono:wght@400;500&display=swap"
         />
-        <meta name="theme-color" content={theme === 'dark' ? '#0B0F1A' : '#F7F5F0'} />
+        <meta name="theme-color" content={THEME_BG[theme]} />
       </head>
       <body>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        <TelegramChrome theme={theme} />
         {children}
       </body>
     </html>

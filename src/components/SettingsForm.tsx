@@ -4,7 +4,11 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteEverything, setThemePref, updateDayWindow } from '@/app/actions';
+import { applyTheme } from '@/lib/telegram-client';
+import { resolveTheme, type ThemePref } from '@/lib/theme';
+import { parseTimeOfDay } from '@/lib/sleep-day';
 import styles from './SettingsForm.module.css';
+import { IconBack } from './Icons';
 
 /** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
 const ZONES = [
@@ -26,9 +30,9 @@ const ZONES = [
 ] as const;
 
 const THEMES = [
+  ['light', 'Светлая'],
+  ['dark', 'Тёмная'],
   ['auto', 'По времени суток'],
-  ['light', 'Всегда светлая'],
-  ['dark', 'Всегда тёмная'],
 ] as const;
 
 interface Props {
@@ -65,11 +69,35 @@ export function SettingsForm(props: Props) {
     startTransition(async () => {
       try {
         await updateDayWindow({ dayBoundary, nightFrom, timeZone });
-        if (theme !== props.themePref) await setThemePref(theme);
         setSaved(true);
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
+      }
+    });
+  };
+
+  // Тема применяется сразу по касанию, без кнопки «Сохранить»: её выбирают,
+  // чтобы увидеть результат, а не чтобы заполнить форму.
+  const chooseTheme = (pref: ThemePref) => {
+    setTheme(pref);
+    try {
+      applyTheme(
+        resolveTheme(pref, {
+          dayBoundary: parseTimeOfDay(dayBoundary),
+          nightFrom: parseTimeOfDay(nightFrom),
+          timeZone,
+        }),
+      );
+    } catch {
+      // Время в полях недописано — тему покажет сервер после сохранения.
+    }
+    startTransition(async () => {
+      try {
+        await setThemePref(pref);
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Не получилось сменить тему');
       }
     });
   };
@@ -92,10 +120,30 @@ export function SettingsForm(props: Props) {
     <main className={styles.screen}>
       <header className={styles.head}>
         <Link href="/" className={styles.back} aria-label="Назад">
-          ‹
+          <IconBack />
         </Link>
         <h1>Настройки</h1>
       </header>
+
+      <section className={styles.block}>
+        <h2>Оформление</h2>
+        <p className={styles.hint}>
+          «По времени суток» — днём светлая, ночью тёмная, по границам ваших суток.
+        </p>
+        <div className={styles.chips}>
+          {THEMES.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={theme === value}
+              onClick={() => chooseTheme(value)}
+              className={`${styles.chip} ${theme === value ? styles.chipOn : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className={styles.block}>
         <h2>Сутки</h2>
@@ -127,23 +175,6 @@ export function SettingsForm(props: Props) {
         </label>
       </section>
 
-      <section className={styles.block}>
-        <h2>Оформление</h2>
-        <p className={styles.hint}>Ночью приложение открывается тёмным, чтобы не бить в глаза.</p>
-        <div className={styles.chips}>
-          {THEMES.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={theme === value}
-              onClick={() => setTheme(value)}
-              className={`${styles.chip} ${theme === value ? styles.chipOn : ''}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
 
       <section className={styles.block}>
         <h2>Выгрузка</h2>

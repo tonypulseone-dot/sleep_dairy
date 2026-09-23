@@ -3,10 +3,13 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { rhythmNorms, sleeps } from '@/db/schema';
+import { IconSettings } from '@/components/Icons';
 import { SleepToggle } from '@/components/SleepToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import { ageInMonths, rhythmHint } from '@/lib/rhythm';
+import { resolveTheme } from '@/lib/theme';
 import {
   daySegments,
   dayStartInstant,
@@ -134,17 +137,12 @@ export default async function Home() {
           <p className={styles.name}>{child.name}</p>
           <span className={styles.date}>{dateLabel}</span>
         </div>
-        <Link href="/settings" className={styles.gear} aria-label="Настройки">
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.5" />
-            <path
-              d="M12 3.4v2.2M12 18.4v2.2M3.4 12h2.2M18.4 12h2.2M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </Link>
+        <div className={styles.tools}>
+          <ThemeToggle theme={resolveTheme(parent.themePref, window, now)} className={styles.tool} />
+          <Link href="/settings" className={styles.tool} aria-label="Настройки">
+            <IconSettings />
+          </Link>
+        </div>
       </header>
 
       {support && <p className={styles.support}>{support}</p>}

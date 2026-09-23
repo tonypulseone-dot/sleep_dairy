@@ -10,13 +10,23 @@
 .head { display: flex; align-items: center; gap: 8px; }
 
 .back {
-  font-size: 28px; line-height: 1; text-decoration: none; color: var(--ink-3);
-  width: 42px; height: 42px; display: grid; place-items: center; flex: none;
+  width: 44px; height: 44px; margin-left: -8px; flex: none;
+  display: grid; place-items: center;
+  color: var(--ink-2); text-decoration: none;
+  background: none; border: none; padding: 0;
   border-radius: 50%; transition: color 140ms ease, background 140ms ease;
 }
-.back:hover { color: var(--ink-2); background: var(--surface); }
+.back:hover { color: var(--ink); background: var(--surface); }
 
-.nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.head .nav { margin-right: 36px; }
+
+/* Листание дней — отдельной «таблеткой», чтобы стрелки не путались с кнопкой назад. */
+.nav {
+  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 2px;
+  max-width: 340px; margin: 0 auto;
+  padding: 2px;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: 999px;
+}
 
 .title {
   font-family: var(--font-display);
@@ -28,12 +38,12 @@
 }
 
 .step {
-  width: 42px; height: 42px; display: grid; place-items: center;
-  font-size: 22px; line-height: 1; color: var(--ink-3); text-decoration: none;
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  color: var(--ink-2); text-decoration: none;
   border-radius: 50%; transition: color 140ms ease, background 140ms ease;
 }
-.step:hover { color: var(--ink-2); background: var(--surface); }
-.stepOff { opacity: .22; pointer-events: none; }
+.step:hover { color: var(--ink); background: var(--surface-2); }
+.stepOff { opacity: .25; pointer-events: none; }
 
 .totals {
   display: grid;

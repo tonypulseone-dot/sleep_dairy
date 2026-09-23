@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
+import { IconBack, IconForward } from './Icons';
 
 export interface DayRow {
   id: string;
@@ -95,20 +96,20 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals }: Pro
     <main className={styles.screen}>
       <header className={styles.head}>
         <Link href="/" className={styles.back} aria-label="Назад">
-          ‹
+          <IconBack />
         </Link>
         <div className={styles.nav}>
           <Link href={`/day?d=${prevDay}`} className={styles.step} aria-label="Предыдущий день">
-            ‹
+            <IconBack />
           </Link>
           <span className={styles.title}>{title}</span>
           {nextDay ? (
             <Link href={`/day?d=${nextDay}`} className={styles.step} aria-label="Следующий день">
-              ›
+              <IconForward />
             </Link>
           ) : (
             <span className={`${styles.step} ${styles.stepOff}`} aria-hidden="true">
-              ›
+              <IconForward />
             </span>
           )}
         </div>

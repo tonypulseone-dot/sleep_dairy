@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { confirmImport, parseDiaryImages, type ParsedDay } from '@/app/import-actions';
 import { PROBLEM_TEXT } from '@/lib/diary-parse';
 import styles from './ImportDiary.module.css';
+import { IconBack, IconClose } from './Icons';
 
 /**
  * Загрузка дневника снимками.
@@ -136,7 +137,7 @@ export function ImportDiary({ visionReady }: { visionReady: boolean }) {
     <main className={styles.screen}>
       <header className={styles.head}>
         <Link href="/day" className={styles.back} aria-label="Назад">
-          ‹
+          <IconBack />
         </Link>
         <h1>Дневник снимками</h1>
       </header>
@@ -214,7 +215,7 @@ export function ImportDiary({ visionReady }: { visionReady: boolean }) {
                     onClick={() => drop(dayIndex, rowIndex)}
                     aria-label="Убрать запись"
                   >
-                    ✕
+                    <IconClose size={18} />
                   </button>
                 )}
               </div>

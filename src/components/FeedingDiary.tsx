@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addFeeding, deleteFeeding } from '@/app/actions';
 import styles from './FeedingDiary.module.css';
+import { IconBack, IconClose } from './Icons';
 
 /**
  * Дневник кормления — только для искусственного и смешанного.
@@ -53,7 +54,7 @@ export function FeedingDiary({
     <main className={styles.screen}>
       <header className={styles.head}>
         <Link href="/" className={styles.back} aria-label="К снам">
-          ‹
+          <IconBack />
         </Link>
         <h1>Кормления</h1>
         <span className={styles.name}>{childName}</span>
@@ -108,7 +109,7 @@ export function FeedingDiary({
               disabled={pending}
               onClick={() => run(() => deleteFeeding(row.id))}
             >
-              ✕
+              <IconClose size={18} />
             </button>
           </li>
         ))}

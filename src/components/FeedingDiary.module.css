@@ -15,11 +15,13 @@
 .name { margin-left: auto; font-size: 13px; color: var(--ink-3); }
 
 .back {
-  font-size: 28px; line-height: 1; text-decoration: none; color: var(--ink-3);
-  width: 42px; height: 42px; display: grid; place-items: center; flex: none;
+  width: 44px; height: 44px; margin-left: -8px; flex: none;
+  display: grid; place-items: center;
+  color: var(--ink-2); text-decoration: none;
+  background: none; border: none; padding: 0;
   border-radius: 50%; transition: color 140ms ease, background 140ms ease;
 }
-.back:hover { color: var(--ink-2); background: var(--surface); }
+.back:hover { color: var(--ink); background: var(--surface); }
 
 .amountsLabel { font-size: 13px; color: var(--ink-3); margin-bottom: -6px; }
 
@@ -65,7 +67,7 @@
 .time { font-size: 16px; font-variant-numeric: tabular-nums; }
 .ml { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--day-ink); }
 
-.remove { width: 42px; height: 42px; color: var(--ink-3); font-size: 15px; border-radius: 50%; }
+.remove { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-2); border-radius: 50%; }
 .remove:hover { color: var(--danger); }
 
 .empty { color: var(--ink-3); font-size: 14px; text-align: center; padding: 22px 0; }

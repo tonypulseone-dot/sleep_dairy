@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { IconBack } from './Icons';
 
 /**
  * Стрелка «назад» для страниц, на которые приходят с разных экранов.
@@ -20,7 +21,7 @@ export function BackLink({ className, fallback = '/' }: { className?: string; fa
         else router.push(fallback);
       }}
     >
-      ‹
+      <IconBack />
     </button>
   );
 }

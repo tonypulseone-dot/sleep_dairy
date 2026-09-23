@@ -21,14 +21,19 @@
 
 .date { font-size: 13px; color: var(--ink-3); }
 
-.gear {
-  width: 42px; height: 42px; margin: -6px -8px 0 0;
+/* Тема и настройки — две круглые кнопки справа от имени, под большой палец. */
+.tools { display: flex; gap: 6px; margin: -4px -6px 0 0; flex: none; }
+.tool {
+  width: 44px; height: 44px;
   display: grid; place-items: center;
-  color: var(--ink-3); text-decoration: none;
+  color: var(--ink-2); text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
   border-radius: 50%;
-  transition: color 140ms ease, background 140ms ease;
+  transition: color 140ms ease, background 140ms ease, transform 120ms ease;
 }
-.gear:hover { color: var(--ink-2); background: var(--surface); }
+.tool:hover { color: var(--ink); }
+.tool:active { transform: scale(.94); }
 
 .stage { flex: 1; display: grid; place-items: center; padding-block: clamp(8px, 4vh, 28px); }
 
@@ -88,13 +93,16 @@
 /* Второй дневник — тихой ссылкой: он нужен не всем и не должен спорить с итогами. */
 .secondary {
   align-self: center;
-  font-size: 14px;
-  color: var(--ink-3);
+  font-size: 14.5px;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
   text-decoration: none;
-  padding: 8px 16px;
+  min-height: 44px;
+  display: inline-flex; align-items: center;
+  padding: 0 18px;
   border-radius: 999px;
   transition: color 140ms ease, background 140ms ease;
 }
-.secondary:hover { color: var(--ink-2); background: var(--surface); }
+.secondary:hover { color: var(--ink); background: var(--surface); }
 
 .links { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }

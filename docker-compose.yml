@@ -49,8 +49,12 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Бот включается профилем: COMPOSE_PROFILES=bot в .env. Установщик ставит
+  # его, только если с сервера открывается api.telegram.org, — иначе бот
+  # падал бы и перезапускался по кругу. Приложению бот не нужен.
   bot:
     build: .
+    profiles: ['bot']
     restart: unless-stopped
     command: ['node', 'runtime/bot.cjs']
     environment:

@@ -7,6 +7,7 @@ import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import { ageInMonths } from '@/lib/rhythm';
 import styles from './activities.module.css';
+import { IconBack } from '@/components/Icons';
 
 /**
  * Чем занять в бодрствование.
@@ -41,7 +42,7 @@ export default async function ActivitiesPage() {
     <main className={styles.screen}>
       <header className={styles.head}>
         <Link href="/" className={styles.back} aria-label="Назад">
-          ‹
+          <IconBack />
         </Link>
         <h1>Чем заняться</h1>
         <span className={styles.age}>{months} мес</span>

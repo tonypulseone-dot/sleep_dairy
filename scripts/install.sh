@@ -269,6 +269,8 @@ SESSION=$(env_value SESSION_SECRET);     [ -n "$SESSION" ] || SESSION=$(openssl 
 ANTHROPIC=$(env_value ANTHROPIC_API_KEY)
 # Прямые ссылки t.me/бот/app работают, только если мини-приложение заведено
 # в BotFather через /newapp. Без бота это единственный способ пригласить маму.
+PROFILES=''
+[ -z "$TG_OK" ] || PROFILES=bot
 APP_SHORT=$(env_value TELEGRAM_APP_SHORT_NAME)
 [ -n "$APP_SHORT" ] || [ -n "$TG_OK" ] || APP_SHORT=app
 L_OPERATOR=$(env_value LEGAL_OPERATOR)
@@ -284,6 +286,8 @@ TELEGRAM_BOT_USERNAME=$BOT
 # Короткое имя мини-приложения из BotFather (/newapp). Пусто — приглашения
 # идут через бота: t.me/бот?start=...
 TELEGRAM_APP_SHORT_NAME=$APP_SHORT
+# Бот-помощник запускается, только если с сервера открывается Telegram.
+COMPOSE_PROFILES=$PROFILES
 
 POSTGRES_PASSWORD=$PG_PASS
 SESSION_SECRET=$SESSION
@@ -315,10 +319,8 @@ fi
 # --------------------------------------------------------------------- 6
 bold "6/7 · Сборка и запуск"
 echo "  Самый долгий шаг, обычно 5–10 минут. Ход сборки пишется в $LOG"
-# Без доступа к Telegram бот только падал бы и перезапускался по кругу.
-SCALE=()
-[ -n "$TG_OK" ] || SCALE=(--scale bot=0)
-if ! docker compose up -d --build "${SCALE[@]}" </dev/null >>"$LOG" 2>&1; then
+# Бот поднимется, только если в .env включён его профиль (см. выше).
+if ! docker compose up -d --build </dev/null >>"$LOG" 2>&1; then
   tail -n 30 "$LOG" >&2
   die "Сборка или запуск не удались. Полный журнал: $LOG — пришлите его."
 fi
