@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { startSleep, stopSleep } from '@/app/actions';
 import { SleepRing } from './SleepRing';
 import type { DaySegment } from '@/lib/sleep-day';
@@ -50,16 +51,16 @@ export function SleepToggle({
   // Часы тикают только в браузере: на сервере «сейчас» ещё нет,
   // и нарисованное время разошлось бы с разметкой при гидрации.
   useEffect(() => {
-    if (!since) {
-      setElapsed(null);
-      return;
-    }
+    if (!since) return;
     const from = new Date(since).getTime();
     const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - from) / 60_000)));
     tick();
     const timer = setInterval(tick, 20_000);
     return () => clearInterval(timer);
   }, [since]);
+
+  // Без отсчёта (ни одного сна) показываем не старое значение, а ничего.
+  const minutes = since ? elapsed : null;
 
   const act = () => {
     startTransition(async () => {
@@ -84,15 +85,31 @@ export function SleepToggle({
 
       <div className={styles.status} aria-live="polite">
         <p className={styles.elapsed}>
-          {elapsed === null
+          {minutes === null
             ? since
               ? ' '
               : 'Первый сон ещё не отмечен'
-            : isSleeping
-              ? `Спит ${human(elapsed)}`
-              : `Бодрствует ${human(elapsed)}`}
+            : stale
+              ? 'Сон идёт больше суток'
+              : isSleeping
+                ? `Спит ${human(minutes)}`
+                : `Бодрствует ${human(minutes)}`}
         </p>
-        {hint && <p className={styles.hint}>{hint}</p>}
+        {/*
+          «Спит 98 ч» маму не информирует, а пугает. Сон дольше двадцати
+          часов — почти всегда забытая отметка, поэтому говорим прямо и
+          ведём туда, где время пробуждения можно вписать задним числом.
+        */}
+        {stale ? (
+          <p className={styles.hint}>
+            Похоже, пробуждение не отметили.{' '}
+            <Link href="/day" className={styles.fix}>
+              Вписать время
+            </Link>
+          </p>
+        ) : (
+          hint && <p className={styles.hint}>{hint}</p>
+        )}
       </div>
 
       <div className={styles.offsets} role="group" aria-label="Когда это случилось">
