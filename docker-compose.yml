@@ -71,6 +71,9 @@ services:
       APP_DOMAIN: ${APP_DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Сайты других сервисов на этом сервере — по файлу *.caddy на сайт.
+      # После правки: scripts/caddy-reload.sh (проверит и перечитает).
+      - ${CADDY_SITES_DIR:-/opt/caddy-sites}:/etc/caddy/sites:ro
       - caddy-data:/data
     depends_on:
       - app
@@ -78,3 +81,9 @@ services:
 volumes:
   db-data:
   caddy-data:
+
+# Имя сети закреплено: к ней подключаются другие сервисы на этом сервере
+# (external: true), и оно не должно зависеть от названия папки проекта.
+networks:
+  default:
+    name: sleep_dairy_default

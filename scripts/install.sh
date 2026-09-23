@@ -263,6 +263,8 @@ else
   ok "Код скачан в $DIR"
 fi
 cd "$DIR"
+# Папка для сайтов других сервисов — её подключает Caddy (см. docker-compose.yml).
+mkdir -p /opt/caddy-sites
 
 PG_PASS=$(env_value POSTGRES_PASSWORD);  [ -n "$PG_PASS" ] || PG_PASS=$(openssl rand -hex 32)
 SESSION=$(env_value SESSION_SECRET);     [ -n "$SESSION" ] || SESSION=$(openssl rand -hex 32)

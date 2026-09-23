@@ -109,6 +109,47 @@ docker compose exec app node runtime/seed-consultant.cjs \
 включается строкой `COMPOSE_PROFILES=bot` в `.env` — если Telegram с сервера
 когда-нибудь откроется, её достаточно дописать и выполнить `docker compose up -d`.
 
+## Другие сервисы на этом же сервере
+
+Порты 80 и 443 занимает Caddy из этого проекта. Второй сервис их не
+открывает, а подключается к сети дневника, и Caddy проксирует на него свой
+домен — с таким же автоматическим сертификатом.
+
+1. В `docker-compose.yml` второго сервиса — общая сеть и никаких `ports`:
+
+   ```yaml
+   services:
+     prizma:            # по этому имени Caddy найдёт сервис
+       build: .
+       restart: unless-stopped
+   networks:
+     default:
+       name: sleep_dairy_default
+       external: true
+   ```
+
+2. A-запись домена — на IP этого сервера.
+
+3. Файл сайта в `/opt/caddy-sites/` (папка вне репозитория, обновления
+   дневника её не трогают), например `/opt/caddy-sites/prizma.caddy`:
+
+   ```
+   prizma.example.ru {
+   	encode zstd gzip
+   	reverse_proxy prizma:3000
+   }
+   ```
+
+4. Перечитать конфигурацию:
+
+   ```bash
+   /opt/sleep_dairy/scripts/caddy-reload.sh
+   ```
+
+   Скрипт сначала проверяет всё целиком: один файл с ошибкой ломает
+   конфигурацию вместе с дневником, поэтому при ошибке Caddy остаётся на
+   прежней. Незакрытую скобку Caddy показывает в следующем по алфавиту файле.
+
 ## Обновление
 
 ```bash
