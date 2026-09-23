@@ -10,6 +10,13 @@
 #
 # Запускать повторно безопасно: пароль базы и секрет сессий берутся из уже
 # существующего .env, данные остаются на месте. Так же обновляется код.
+#
+# Ответы можно передать заранее, тогда скрипт ни о чём не спросит:
+#
+#   curl -fsSL .../install.sh | SD_TOKEN='123:AA...' SD_BOT='son_bot' \
+#     SD_DOMAIN='son.example.ru' SD_EMAIL='v@mail.ru' SD_PASS='...' bash
+#
+# Необязательные: SD_NAME (по умолчанию «Виктория»), SD_SLUG («viktoria»).
 
 set -euo pipefail
 
@@ -26,10 +33,32 @@ ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\n  \033[31m✗ %s\033[0m\n\n' "$*" >&2; exit 1; }
 
+TOKEN=${SD_TOKEN:-}
+BOT=${SD_BOT:-}
+DOMAIN=${SD_DOMAIN:-}
+C_NAME=${SD_NAME:-}
+C_EMAIL=${SD_EMAIL:-}
+C_PASS=${SD_PASS:-}
+C_SLUG=${SD_SLUG:-}
+# Токен передан заранее — значит, и остальное тоже: вопросов не задаём.
+UNATTENDED=''
+[ -z "$TOKEN" ] || UNATTENDED=1
+
 # Ответы читаем с терминала, а не из stdin: при запуске через `curl | bash`
-# stdin занят самим скриптом.
+# stdin занят самим скриптом. Переданное заранее не спрашиваем и не
+# печатаем — среди этого токен и пароль.
 ask() {
-  local __var=$1 prompt=$2 default=${3:-} reply=''
+  local __var=$1 prompt=$2 default=${3:-} reply=${!1:-}
+  if [ -n "$reply" ]; then
+    printf '  %s: задано заранее\n' "$prompt"
+    return
+  fi
+  if [ -n "$UNATTENDED" ]; then
+    [ -n "$default" ] || die "Не передано значение для «$prompt»."
+    printf '  %s: %s\n' "$prompt" "$default"
+    printf -v "$__var" '%s' "$default"
+    return
+  fi
   while [ -z "$reply" ]; do
     if [ -n "$default" ]; then
       read -r -p "  $prompt [$default]: " reply </dev/tty || true
@@ -43,7 +72,13 @@ ask() {
 }
 
 ask_secret() {
-  local __var=$1 prompt=$2 reply=''
+  local __var=$1 prompt=$2 reply=${!1:-}
+  if [ -n "$reply" ]; then
+    [ ${#reply} -ge 8 ] || die "Пароль для кабинета должен быть не короче 8 символов."
+    printf '  %s: задано заранее\n' "$prompt"
+    return
+  fi
+  [ -z "$UNATTENDED" ] || die "Не передан пароль для кабинета (SD_PASS)."
   while [ ${#reply} -lt 8 ]; do
     read -r -s -p "  $prompt: " reply </dev/tty || true
     echo
@@ -54,6 +89,12 @@ ask_secret() {
 
 confirm() {
   local reply=''
+  # Без вопросов не останавливаемся: если домен и правда смотрит не туда,
+  # установка всё равно упрётся в сертификат и скажет об этом прямо.
+  if [ -n "$UNATTENDED" ]; then
+    warn "Продолжаем: вопросы отключены."
+    return 0
+  fi
   read -r -p "  $1 [y/N]: " reply </dev/tty || true
   [[ $reply =~ ^[YyДд] ]]
 }
@@ -66,10 +107,14 @@ env_value() {
 }
 
 [ "$(id -u)" -eq 0 ] || die "Нужны права root. Выполните sudo -i и запустите команду ещё раз."
-[ -r /dev/tty ] || die "Скрипт задаёт вопросы, поэтому запускать его нужно в терминале."
+[ -n "$UNATTENDED" ] || [ -r /dev/tty ] || die "Скрипт задаёт вопросы, поэтому запускать его нужно в терминале."
 
 bold "Дневник сна — установка"
-echo "  Сначала несколько вопросов, потом всё сделается само, минут 10–15."
+if [ -n "$UNATTENDED" ]; then
+  echo "  Все ответы переданы заранее — дальше всё сделается само, минут 10–15."
+else
+  echo "  Сначала несколько вопросов, потом всё сделается само, минут 10–15."
+fi
 
 # --------------------------------------------------------------------- 1
 bold "1/7 · Бот"
