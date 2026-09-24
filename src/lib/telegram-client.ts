@@ -15,6 +15,11 @@ interface TelegramWebApp {
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
+  HapticFeedback?: {
+    impactOccurred?: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
+    notificationOccurred?: (type: 'error' | 'success' | 'warning') => void;
+    selectionChanged?: () => void;
+  };
 }
 
 declare global {
@@ -56,4 +61,25 @@ export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_BG[theme]);
   paintTelegram(theme);
+}
+
+/**
+ * Отдача в руку. Ночью мама отмечает сон, не глядя в экран: толчок при
+ * нажатии говорит «нажалось», двойной «успех» — «записалось».
+ * Вне Telegram — обычная вибрация, где браузер её умеет (на iPhone нет).
+ */
+export function haptic(kind: 'tap' | 'success' | 'error' | 'select') {
+  const feedback = webApp()?.HapticFeedback;
+  try {
+    if (feedback && webApp()?.isVersionAtLeast?.('6.1')) {
+      if (kind === 'tap') feedback.impactOccurred?.('medium');
+      else if (kind === 'select') feedback.selectionChanged?.();
+      else feedback.notificationOccurred?.(kind);
+      return;
+    }
+    const pattern = { tap: 12, select: 6, success: [10, 60, 18], error: [30, 50, 30] }[kind];
+    navigator.vibrate?.(pattern);
+  } catch {
+    // Вибрация — приятная мелочь, а не условие работы.
+  }
 }

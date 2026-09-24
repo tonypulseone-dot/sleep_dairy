@@ -6,6 +6,7 @@ import { startSleep, stopSleep } from '@/app/actions';
 import { SleepRing } from './SleepRing';
 import type { DaySegment } from '@/lib/sleep-day';
 import { childWords, type ChildSex } from '@/lib/words';
+import { haptic } from '@/lib/telegram-client';
 import styles from './SleepToggle.module.css';
 
 interface Props {
@@ -67,9 +68,16 @@ export function SleepToggle({
   const minutes = since ? elapsed : null;
 
   const act = () => {
+    haptic('tap');
     startTransition(async () => {
-      if (isSleeping) await stopSleep(offset);
-      else await startSleep(offset);
+      try {
+        if (isSleeping) await stopSleep(offset);
+        else await startSleep(offset);
+        haptic('success');
+      } catch (error) {
+        haptic('error');
+        throw error;
+      }
       setOffset(0);
     });
   };
@@ -132,7 +140,10 @@ export function SleepToggle({
               type="button"
               aria-pressed={offset === value}
               aria-label={value === 0 ? 'Сейчас' : `${value} минут назад`}
-              onClick={() => setOffset(value)}
+              onClick={() => {
+                haptic('select');
+                setOffset(value);
+              }}
               className={`${styles.offset} ${offset === value ? styles.offsetOn : ''}`}
             >
               {value === 0 ? (
