@@ -50,6 +50,13 @@
       "when": 1790191296925,
       "tag": "0006_child_sex",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790210806426,
+      "tag": "0007_activity_energy",
+      "breakpoints": true
     }
   ]
 }

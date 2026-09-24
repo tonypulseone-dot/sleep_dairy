@@ -24,6 +24,11 @@ export const entrySource = pgEnum('entry_source', ['timer', 'manual', 'photo']);
 export const feedingType = pgEnum('feeding_type', ['breast', 'formula', 'mixed']);
 /** Нужен только для грамматики: «уснул» или «уснула». */
 export const childSex = pgEnum('child_sex', ['boy', 'girl']);
+/**
+ * Сколько сил просит занятие. По методу Виктории активное — в начале
+ * бодрствования, спокойное — ближе ко сну; так мама и выбирает.
+ */
+export const activityEnergy = pgEnum('activity_energy', ['active', 'explore', 'calm']);
 export const themePref = pgEnum('theme_pref', ['auto', 'light', 'dark']);
 export const plan = pgEnum('plan', ['trial', 'practice', 'flow']);
 export const showcaseStatus = pgEnum('showcase_status', ['hidden', 'pending', 'published', 'rejected']);
@@ -322,6 +327,9 @@ export const activities = pgTable(
     ageMonthsTo: smallint('age_months_to').notNull(),
     title: text('title').notNull(),
     body: text('body').notNull(),
+    energy: activityEnergy('energy').notNull().default('explore'),
+    /** Сколько обычно длится, минут — чтобы прикинуть под окно бодрствования. */
+    minutes: smallint('minutes'),
     published: boolean('published').notNull().default(true),
   },
   (table) => [index('activities_age_idx').on(table.ageMonthsFrom, table.ageMonthsTo)],

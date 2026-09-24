@@ -49,6 +49,22 @@
   --day-on: #191C24;
   --night-on: #FFFFFF;
 
+  /*
+   * Энергия занятий: подвигаться · поиграть · спокойно. Три оттенка — ровно
+   * столько, сколько проходят проверку различимости в любых сочетаниях
+   * (валидатор dataviz, --pairs all, обе темы). Спокойное — цвет ночи:
+   * оно и есть подготовка ко сну. Цвет всегда рядом с подписью и значком.
+   */
+  --energy-active: #1BAF7A;
+  --energy-active-soft: #DDF4EB;
+  --energy-active-ink: #0B5D40;
+  --energy-explore: #EB6834;
+  --energy-explore-soft: #FCE5DA;
+  --energy-explore-ink: #8A3413;
+  --energy-calm: #2E5AA8;
+  --energy-calm-soft: #E3E9F7;
+  --energy-calm-ink: #1C3A6E;
+
   --accent: #2E5AA8;
   --accent-ink: #FFFFFF;
   --wake: #C97A16;
@@ -100,6 +116,16 @@
   --night-ink: #8FAFEA;
   --day-on: #171104;
   --night-on: #0B1222;
+
+  --energy-active: #199E70;
+  --energy-active-soft: #11291F;
+  --energy-active-ink: #7AD8B2;
+  --energy-explore: #D95926;
+  --energy-explore-soft: #2E1A12;
+  --energy-explore-ink: #F2A07E;
+  --energy-calm: #5A83D8;
+  --energy-calm-soft: #18213A;
+  --energy-calm-ink: #8FAFEA;
 
   --accent: #5A83D8;
   --accent-ink: #0B1222;

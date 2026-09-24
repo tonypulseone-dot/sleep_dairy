@@ -1,0 +1,56 @@
+/* Цвет энергии задаётся на элементе, дочерние берут его через переменные. */
+.active { --e: var(--energy-active); --e-soft: var(--energy-active-soft); --e-ink: var(--energy-active-ink); }
+.explore { --e: var(--energy-explore); --e-soft: var(--energy-explore-soft); --e-ink: var(--energy-explore-ink); }
+.calm { --e: var(--energy-calm); --e-soft: var(--energy-calm-soft); --e-ink: var(--energy-calm-ink); }
+
+.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.step {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 12px 12px 11px; min-height: 44px; text-align: left;
+  background: var(--e-soft); border: 1px solid transparent; border-radius: var(--radius-sm);
+  transition: opacity 140ms ease, border-color 140ms ease, transform 120ms ease;
+}
+.step:active { transform: scale(.97); }
+.stepOn { border-color: var(--e); box-shadow: 0 0 0 1px var(--e); }
+.stepOff { opacity: .55; }
+
+.stepIcon {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--e); color: var(--surface);
+}
+.stepLabel { font-size: 14.5px; font-weight: 600; color: var(--e-ink); }
+.stepWhen { font-size: 12px; line-height: 1.3; color: var(--e-ink); opacity: .85; }
+
+.reset {
+  align-self: flex-start; min-height: 44px; padding: 0 4px;
+  font-size: 14px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px;
+}
+
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  position: relative; overflow: hidden;
+  padding: 14px 18px 16px 22px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+}
+/* Цветная кромка слева — энергия видна, даже когда листаешь быстро. */
+.card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--e); }
+
+.meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px 3px 8px; border-radius: 999px;
+  background: var(--e-soft); color: var(--e-ink);
+  font-size: 12.5px; font-weight: 600;
+}
+.minutes { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.card h2 { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 5px; }
+.card p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+
+@media (max-width: 360px) {
+  .stepWhen { display: none; }
+}

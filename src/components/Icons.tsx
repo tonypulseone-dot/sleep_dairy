@@ -63,3 +63,17 @@ export function IconSun(props: IconProps) {
 export function IconMoon(props: IconProps) {
   return <Svg {...props}><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" /></Svg>;
 }
+
+/** Энергия занятий: подвигаться — молния, поиграть — искра, спокойно — луна. */
+export function IconBolt(props: IconProps) {
+  return <Svg {...props}><path d="M13 3 5.5 13.5H12l-1 7.5 7.5-10.5H12z" /></Svg>;
+}
+
+export function IconSparkle(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v4M12 16v4M4 12h4M16 12h4" />
+      <path d="M12 8.5c.6 2 1.5 2.9 3.5 3.5-2 .6-2.9 1.5-3.5 3.5-.6-2-1.5-2.9-3.5-3.5 2-.6 2.9-1.5 3.5-3.5z" />
+    </Svg>
+  );
+}

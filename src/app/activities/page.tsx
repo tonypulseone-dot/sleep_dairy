@@ -7,6 +7,7 @@ import { currentChild, currentParent } from '@/lib/session';
 import { ageInMonths } from '@/lib/rhythm';
 import styles from './activities.module.css';
 import { BackButton } from '@/components/BackButton';
+import { ActivityList } from '@/components/ActivityList';
 
 /**
  * Чем занять в бодрствование.
@@ -35,7 +36,8 @@ export default async function ActivitiesPage() {
         gte(activities.ageMonthsTo, months),
       ),
     )
-    .orderBy(asc(activities.ageMonthsFrom));
+    // Сначала подвижное, потом спокойное — как идёт окно бодрствования.
+    .orderBy(asc(activities.energy), asc(activities.ageMonthsFrom));
 
   return (
     <main className={styles.screen}>
@@ -47,20 +49,22 @@ export default async function ActivitiesPage() {
 
       <p className={styles.lead}>
         Если малыш закапризничал в конце бодрствования, это не всегда усталость. Иногда просто
-        скучно — и тогда сон лучше не двигать.
+        скучно — и тогда сон лучше не двигать. Начните с подвижного, а ближе ко сну выберите
+        спокойное.
       </p>
 
       {rows.length === 0 ? (
         <p className={styles.empty}>Для этого возраста пока ничего не добавлено</p>
       ) : (
-        <ul className={styles.list}>
-          {rows.map((row) => (
-            <li key={row.id} className={styles.card}>
-              <h2>{row.title}</h2>
-              <p>{row.body}</p>
-            </li>
-          ))}
-        </ul>
+        <ActivityList
+          items={rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            body: row.body,
+            energy: row.energy,
+            minutes: row.minutes,
+          }))}
+        />
       )}
     </main>
   );
