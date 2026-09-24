@@ -289,6 +289,8 @@ TELEGRAM_BOT_USERNAME=$BOT
 TELEGRAM_APP_SHORT_NAME=$APP_SHORT
 # Бот-помощник запускается, только если с сервера открывается Telegram.
 COMPOSE_PROFILES=$PROFILES
+# Консультант, которому мама открывает дневник при регистрации (с согласием).
+DEFAULT_CONSULTANT_SLUG=$C_SLUG
 
 POSTGRES_PASSWORD=$PG_PASS
 SESSION_SECRET=$SESSION

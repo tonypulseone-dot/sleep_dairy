@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { grantAccess, revokeAccess } from '@/app/actions';
 import styles from './ConsultantAccess.module.css';
 import { BackButton } from './BackButton';
+import { ConsentBox } from './ConsentBox';
 
 export interface GrantView {
   id: string;
@@ -41,28 +42,7 @@ export function ConnectPrompt({ slug, consultantName }: { slug: string; consulta
         в таблицу. Считать ничего не нужно.
       </p>
 
-      <div className={styles.consent}>
-        {/*
-          Имя держим отдельной строкой, а не внутри фразы: в согласии оно должно
-          стоять в именительном падеже, иначе на каждом втором имени получится
-          «передать Виктория данные».
-        */}
-        <div className={styles.consentWho}>
-          Консультант: <b>{consultantName}</b>
-        </div>
-        <label className={styles.check}>
-          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-          <span>
-            Я согласна передать консультанту данные о сне и здоровье моего ребёнка на время
-            консультации — на условиях{' '}
-            {/* Ссылка внутри подписи к галочке: клик по ней не должен её переключать. */}
-            <Link href="/privacy" className={styles.policy} onClick={(e) => e.stopPropagation()}>
-              политики конфиденциальности
-            </Link>
-            . Доступ можно отозвать в любой момент, дневник останется у меня.
-          </span>
-        </label>
-      </div>
+      <ConsentBox consultantName={consultantName} agreed={agreed} onChange={setAgreed} />
 
       {error && <p className={styles.error}>{error}</p>}
 

@@ -1,0 +1,14 @@
+.consent {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+  padding: 16px; text-align: left;
+}
+.who {
+  font-size: 14px; color: var(--ink-2);
+  padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.who b { color: var(--ink); font-weight: 600; }
+.check { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.45; }
+.check input { width: 22px; height: 22px; flex: none; margin-top: 1px; padding: 0; }
+.policy { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createChild } from '@/app/actions';
 import { childWords, type ChildSex } from '@/lib/words';
+import { ConsentBox } from './ConsentBox';
 import { Moon } from './Moon';
 import styles from './Onboarding.module.css';
 
@@ -33,7 +34,7 @@ const FEEDING = [
   { value: 'mixed', label: 'Смешанное' },
 ] as const;
 
-export function Onboarding() {
+export function Onboarding({ consultantName }: { consultantName: string | null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export function Onboarding() {
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
   const [sex, setSex] = useState<ChildSex | null>(null);
+  const [consent, setConsent] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [isPreterm, setIsPreterm] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -63,9 +65,13 @@ export function Onboarding() {
       setError('Выберите, мальчик или девочка');
       return;
     }
+    if (consultantName && !consent) {
+      setError(`Отметьте согласие — без него ${consultantName} не увидит дневник`);
+      return;
+    }
     startTransition(async () => {
       try {
-        await createChild({ name, sex, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType });
+        await createChild({ name, sex, consent, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType });
         router.replace('/');
         router.refresh();
       } catch (cause) {
@@ -200,6 +206,14 @@ export function Onboarding() {
           </button>
         )}
 
+        {/*
+          Приложение — для клиенток консультанта, поэтому доступ ему оформляется
+          сразу при регистрации. Но только с явным согласием: это данные о здоровье.
+        */}
+        {consultantName && (
+          <ConsentBox consultantName={consultantName} agreed={consent} onChange={setConsent} />
+        )}
+
         {error && <p className={styles.error}>{error}</p>}
 
         <button type="submit" className={styles.submit} disabled={pending}>
@@ -210,11 +224,13 @@ export function Onboarding() {
           Про здоровье малыша мы спрашиваем прямо здесь, поэтому и ссылка на
           политику стоит здесь же, а не прячется в настройках.
         */}
+        {!consultantName && (
         <p className={styles.policyNote}>
           Начиная дневник, вы соглашаетесь с{' '}
           <Link href="/privacy">политикой конфиденциальности</Link> — что мы храним, кому
           показываем и как всё удалить.
         </p>
+        )}
       </form>
     </main>
   );

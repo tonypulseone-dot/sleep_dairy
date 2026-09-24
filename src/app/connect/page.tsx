@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { consultants } from '@/db/schema';
+import { accessGrants, consultants } from '@/db/schema';
 import { ConnectPrompt } from '@/components/ConsultantAccess';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
@@ -22,11 +22,25 @@ export default async function ConnectPage({
   if (!slug) redirect('/');
 
   const [consultant] = await db
-    .select({ name: consultants.name })
+    .select({ id: consultants.id, name: consultants.name })
     .from(consultants)
     .where(eq(consultants.slug, slug))
     .limit(1);
   if (!consultant) redirect('/');
+
+  // Доступ уже открыт (например, при регистрации) — второй раз не спрашиваем.
+  const [open] = await db
+    .select({ id: accessGrants.id })
+    .from(accessGrants)
+    .where(
+      and(
+        eq(accessGrants.childId, child.id),
+        eq(accessGrants.consultantId, consultant.id),
+        isNull(accessGrants.revokedAt),
+      ),
+    )
+    .limit(1);
+  if (open) redirect('/');
 
   return <ConnectPrompt slug={slug} consultantName={consultant.name} />;
 }

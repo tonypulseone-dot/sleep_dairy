@@ -112,3 +112,13 @@
 .secondary:hover { color: var(--ink); background: var(--surface); }
 
 .links { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
+
+/* Разовое приглашение открыть дневник консультанту. */
+.invite {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--night-soft); border: 1px solid var(--line);
+  text-decoration: none;
+}
+.inviteTitle { color: var(--ink); font-weight: 600; font-size: 15px; }
+.inviteText { color: var(--ink-2); font-size: 14px; }

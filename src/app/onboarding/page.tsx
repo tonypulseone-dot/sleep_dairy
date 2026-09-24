@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Onboarding } from '@/components/Onboarding';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
+import { defaultConsultant } from '@/lib/default-consultant';
 
 export default async function OnboardingPage() {
   const parent = await currentParent();
@@ -10,5 +11,6 @@ export default async function OnboardingPage() {
   const child = await currentChild(parent.id);
   if (child) redirect('/');
 
-  return <Onboarding />;
+  const consultant = await defaultConsultant();
+  return <Onboarding consultantName={consultant?.name ?? null} />;
 }

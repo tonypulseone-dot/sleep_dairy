@@ -12,6 +12,7 @@ import {
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
+import { defaultConsultant } from '@/lib/default-consultant';
 import type { ChildSex } from '@/lib/words';
 import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
 import {
@@ -95,6 +96,8 @@ export async function stopSleep(minutesAgo = 0) {
 export interface OnboardingInput {
   name: string;
   sex: ChildSex;
+  /** Согласие открыть дневник консультанту по умолчанию (см. defaultConsultant). */
+  consent: boolean;
   birthDate: string;
   dueDate?: string | null;
   isPreterm: boolean;
@@ -111,6 +114,13 @@ export async function createChild(input: OnboardingInput) {
   const name = input.name.trim();
   if (!name) throw new Error('Не заполнено имя');
   if (input.sex !== 'boy' && input.sex !== 'girl') throw new Error('Выберите, мальчик или девочка');
+
+  // Приложение — для клиенток консультанта: без согласия дневник ему не откроется,
+  // а по 152-ФЗ передавать данные о здоровье ребёнка без согласия нельзя.
+  const consultant = await defaultConsultant();
+  if (consultant && !input.consent) {
+    throw new Error(`Отметьте согласие — без него ${consultant.name} не увидит дневник`);
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) throw new Error('Не заполнена дата рождения');
 
   const [created] = await db
@@ -127,6 +137,14 @@ export async function createChild(input: OnboardingInput) {
       feedingType: input.feedingType,
     })
     .returning();
+
+  if (consultant) {
+    await db.insert(accessGrants).values({
+      childId: created.id,
+      consultantId: consultant.id,
+      consentVersion: CONSENT_VERSION,
+    });
+  }
 
   revalidatePath('/');
   return created.id;

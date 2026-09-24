@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { rhythmNorms, sleeps } from '@/db/schema';
+import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
 import { IconSettings } from '@/components/Icons';
 import { SexPrompt } from '@/components/SexPrompt';
+import { defaultConsultant } from '@/lib/default-consultant';
 import { SleepToggle } from '@/components/SleepToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TelegramBoot } from '@/components/TelegramBoot';
@@ -119,6 +120,19 @@ export default async function Home() {
 
   const lastEnded = endedRows[0] ?? null;
 
+  // Мамы, заведённые до того, как доступ стал оформляться при регистрации:
+  // один раз предлагаем открыть дневник консультанту. Если мама уже решала —
+  // открывала или закрывала доступ, — больше не спрашиваем.
+  const consultant = await defaultConsultant();
+  const [everGranted] = consultant
+    ? await db
+        .select({ id: accessGrants.id })
+        .from(accessGrants)
+        .where(and(eq(accessGrants.childId, child.id), eq(accessGrants.consultantId, consultant.id)))
+        .limit(1)
+    : [null];
+  const askConsultant = consultant && !everGranted ? consultant : null;
+
   // Сон длиннее двадцати часов означает не рекорд, а забытую отметку.
   const STALE_AFTER_MINUTES = 20 * 60;
   const stale =
@@ -163,6 +177,13 @@ export default async function Home() {
       </header>
 
       {child.sex === null && <SexPrompt name={child.name} />}
+
+      {askConsultant && (
+        <Link href={`/connect?c=${encodeURIComponent(askConsultant.slug)}`} className={styles.invite}>
+          <span className={styles.inviteTitle}>{askConsultant.name} пока не видит ваш дневник</span>
+          <span className={styles.inviteText}>Открыть доступ, чтобы консультант видел сны малыша</span>
+        </Link>
+      )}
 
       {support && <p className={styles.support}>{support}</p>}
 
