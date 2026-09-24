@@ -19,6 +19,8 @@
 .back:hover { color: var(--ink); background: var(--surface); }
 
 .head .nav { margin-right: 36px; }
+/* В Telegram нашей стрелки нет — таблетку дней не сдвигаем. */
+:global(html[data-tg]) .head .nav { margin-right: 0; }
 
 /* Листание дней — отдельной «таблеткой», чтобы стрелки не путались с кнопкой назад. */
 .nav {

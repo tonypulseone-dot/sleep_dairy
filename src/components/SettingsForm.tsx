@@ -9,7 +9,7 @@ import { applyTheme } from '@/lib/telegram-client';
 import { resolveTheme, type ThemePref } from '@/lib/theme';
 import { parseTimeOfDay } from '@/lib/sleep-day';
 import styles from './SettingsForm.module.css';
-import { IconBack } from './Icons';
+import { BackButton } from './BackButton';
 
 /** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
 const ZONES = [
@@ -135,9 +135,7 @@ export function SettingsForm(props: Props) {
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <Link href="/" className={styles.back} aria-label="Назад">
-          <IconBack />
-        </Link>
+        <BackButton href="/" className={styles.back} label="Назад" />
         <h1>Настройки</h1>
       </header>
 

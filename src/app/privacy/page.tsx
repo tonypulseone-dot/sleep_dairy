@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { BackLink } from '@/components/BackLink';
+import { BackButton } from '@/components/BackButton';
 import { LEGAL, POLICY_UPDATED, legalGaps, orGap } from '@/lib/legal';
 import styles from '@/components/Privacy.module.css';
 
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <BackLink className={styles.back} />
+        <BackButton className={styles.back} />
         <h1>Политика конфиденциальности</h1>
       </header>
       <p className={styles.updated}>Редакция от {POLICY_UPDATED}</p>

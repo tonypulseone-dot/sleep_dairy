@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addFeeding, deleteFeeding } from '@/app/actions';
 import styles from './FeedingDiary.module.css';
-import { IconBack, IconClose } from './Icons';
+import { IconClose } from './Icons';
+import { BackButton } from './BackButton';
 
 /**
  * Дневник кормления — только для искусственного и смешанного.
@@ -53,9 +53,7 @@ export function FeedingDiary({
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <Link href="/" className={styles.back} aria-label="К снам">
-          <IconBack />
-        </Link>
+        <BackButton href="/" className={styles.back} label="К снам" />
         <h1>Кормления</h1>
         <span className={styles.name}>{childName}</span>
       </header>

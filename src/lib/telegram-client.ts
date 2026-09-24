@@ -15,6 +15,12 @@ interface TelegramWebApp {
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
+  BackButton?: {
+    show: () => void;
+    hide: () => void;
+    onClick: (handler: () => void) => void;
+    offClick: (handler: () => void) => void;
+  };
   HapticFeedback?: {
     impactOccurred?: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
     notificationOccurred?: (type: 'error' | 'success' | 'warning') => void;
@@ -30,6 +36,12 @@ declare global {
 
 export function webApp(): TelegramWebApp | undefined {
   return typeof window === 'undefined' ? undefined : window.Telegram?.WebApp;
+}
+
+/** Открыто внутри Telegram, а не в обычном браузере: только там есть initData. */
+export function insideTelegram(): boolean {
+  const app = webApp();
+  return Boolean(app?.initData) && (app?.isVersionAtLeast?.('6.1') ?? false);
 }
 
 /** Фон страницы в каждой теме — тот же, что --bg в globals.css. */

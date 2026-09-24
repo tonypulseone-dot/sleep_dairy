@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { paintTelegram, webApp } from '@/lib/telegram-client';
+import { insideTelegram, paintTelegram, webApp } from '@/lib/telegram-client';
 import type { Theme } from '@/lib/theme';
 
 /**
@@ -13,6 +13,8 @@ export function TelegramChrome({ theme }: { theme: Theme }) {
     const app = webApp();
     app?.ready?.();
     app?.expand?.();
+    // Внутри Telegram свои стрелки «назад» прячем: там есть родная кнопка в шапке.
+    if (insideTelegram()) document.documentElement.dataset.tg = '1';
   }, []);
 
   useEffect(() => {

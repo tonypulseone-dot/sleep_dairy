@@ -7,6 +7,7 @@ import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
 import { IconBack, IconForward } from './Icons';
 import { childWords, type ChildSex } from '@/lib/words';
+import { BackButton } from './BackButton';
 
 export interface DayRow {
   id: string;
@@ -98,9 +99,7 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <Link href="/" className={styles.back} aria-label="Назад">
-          <IconBack />
-        </Link>
+        <BackButton href="/" className={styles.back} label="Назад" />
         <div className={styles.nav}>
           <Link href={`/day?d=${prevDay}`} className={styles.step} aria-label="Предыдущий день">
             <IconBack />

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { db } from '@/db';
@@ -7,7 +6,7 @@ import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import { ageInMonths } from '@/lib/rhythm';
 import styles from './activities.module.css';
-import { IconBack } from '@/components/Icons';
+import { BackButton } from '@/components/BackButton';
 
 /**
  * Чем занять в бодрствование.
@@ -41,9 +40,7 @@ export default async function ActivitiesPage() {
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <Link href="/" className={styles.back} aria-label="Назад">
-          <IconBack />
-        </Link>
+        <BackButton href="/" className={styles.back} label="Назад" />
         <h1>Чем заняться</h1>
         <span className={styles.age}>{months} мес</span>
       </header>

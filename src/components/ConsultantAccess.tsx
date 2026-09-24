@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { grantAccess, revokeAccess } from '@/app/actions';
 import styles from './ConsultantAccess.module.css';
-import { IconBack } from './Icons';
+import { BackButton } from './BackButton';
 
 export interface GrantView {
   id: string;
@@ -97,9 +97,7 @@ export function ConsultantList({ grants }: { grants: GrantView[] }) {
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
-        <Link href="/" className={styles.back} aria-label="Назад">
-          <IconBack />
-        </Link>
+        <BackButton href="/" className={styles.back} label="Назад" />
         <h1>Мой консультант</h1>
       </header>
 

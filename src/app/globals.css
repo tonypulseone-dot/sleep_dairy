@@ -151,6 +151,9 @@ button {
 
 a { color: var(--accent); }
 
+/* Внутри Telegram «назад» — его кнопка в шапке, наша стрелка не нужна. */
+html[data-tg] .tg-hide { display: none; }
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
