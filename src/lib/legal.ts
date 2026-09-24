@@ -22,7 +22,7 @@ export const LEGAL = {
 } as const;
 
 /** Дата последней редакции текста политики. Меняется вместе с текстом. */
-export const POLICY_UPDATED = '23 сентября 2026 года';
+export const POLICY_UPDATED = '24 сентября 2026 года';
 
 /** Чего не хватает в реквизитах. Пустой массив — документ заполнен. */
 export function legalGaps(): string[] {

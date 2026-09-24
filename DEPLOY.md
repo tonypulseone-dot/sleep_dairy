@@ -105,6 +105,36 @@ docker compose exec app node runtime/seed-consultant.cjs \
 включается строкой `COMPOSE_PROFILES=bot` в `.env` — если Telegram с сервера
 когда-нибудь откроется, её достаточно дописать и выполнить `docker compose up -d`.
 
+## Перенос снов из других приложений (GigaChat)
+
+Мамы переносят сны из прежнего трекера скриншотами или текстом из заметок.
+Время со скриншотов переписывает GigaChat (Сбер): серверы в России, данные
+за границу не уходят. Скриншоты удаляются сразу после распознавания, а в
+дневник попадает только то, что мама проверила и подтвердила.
+
+1. developers.sber.ru → проект GigaChat API → «Ключ авторизации» (это
+   base64 от `Client ID:Client Secret`). Впишите его в `.env`:
+   ```
+   GIGACHAT_AUTH_KEY=ключ
+   GIGACHAT_SCOPE=GIGACHAT_API_PERS
+   ```
+   `GIGACHAT_API_PERS` — физлицо; для ИП или компании Сбер выдаёт
+   `GIGACHAT_API_B2B` или `GIGACHAT_API_CORP`.
+2. `docker compose up -d --build` — образ соберётся с сертификатом Минцифры,
+   без него Node не доверяет серверам Сбера.
+3. Проверка доступа и сертификата:
+   ```
+   docker compose exec app node runtime/gigachat-check.cjs
+   ```
+   Проверка распознавания на настоящем скриншоте:
+   ```
+   docker compose cp ~/shot.png app:/tmp/shot.png
+   docker compose exec app node runtime/gigachat-check.cjs /tmp/shot.png
+   ```
+
+Без ключа кнопки переноса в приложении нет. На маму — не больше 60
+распознаваний в сутки, чтобы случайная «пачка» не съела лимит.
+
 ## Другие сервисы на этом же сервере
 
 Порты 80 и 443 занимает Caddy из этого проекта. Второй сервис их не

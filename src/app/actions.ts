@@ -10,6 +10,7 @@ import {
   consultants,
   feedings,
   parents,
+  photoImports,
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
@@ -18,6 +19,9 @@ import type { ChildSex } from '@/lib/words';
 import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
 import {
   composeSleep,
+  localDate,
+  shiftDate,
+  zonedTimeToUtc,
   parseTimeOfDay,
   sleepDayOf,
   sleepKindOf,
@@ -484,5 +488,130 @@ export async function deleteEverything() {
     await db.delete(parents).where(eq(parents.id, parent.id));
     await clearSessionCookie();
     revalidatePath('/', 'layout');
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Перенос снов из других приложений (скриншоты и заметки)
+ * ------------------------------------------------------------------ */
+
+/** Мама согласилась, что скриншоты уходят на распознавание в GigaChat. */
+export async function acceptImportConsent() {
+  return guard(async () => {
+    const { parent } = await requireContext();
+    await db.update(parents).set({ importConsentAt: new Date() }).where(eq(parents.id, parent.id));
+    revalidatePath('/import');
+  });
+}
+
+export interface ImportRow {
+  /** Дата начала сна по календарю, «2026-09-23». */
+  date: string;
+  start: string;
+  end: string;
+}
+
+export interface ImportResult {
+  added: number;
+  /** Сутки последнего добавленного сна — туда и откроем дневник. */
+  lastDay: string | null;
+  skipped: { index: number; reason: string }[];
+}
+
+/**
+ * Записывает проверенные мамой сны. Каждую строку проверяем так же, как
+ * ручной ввод: длительность, будущее, наложение на уже записанное (и на
+ * соседние строки этого же переноса). Негодные строки не валят весь
+ * перенос — их возвращаем с причиной, остальное записываем.
+ */
+export async function commitImport(input: {
+  rows: ImportRow[];
+  screenshots: number;
+  recognized: number;
+  edited: number;
+}) {
+  return guard(async (): Promise<ImportResult> => {
+    const { child, window } = await requireContext();
+    if (!Array.isArray(input.rows) || input.rows.length === 0) throw new UserError('Нечего добавлять — отметьте хотя бы один сон');
+    if (input.rows.length > 300) throw new UserError('Слишком много снов за раз — перенесите частями');
+
+    const now = new Date();
+    const today = localDate(now, window.timeZone);
+    const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: window.timeZone });
+    const skipped: ImportResult['skipped'] = [];
+    let added = 0;
+    let lastDay: string | null = null;
+
+    await db.transaction(async (tx) => {
+      const [batch] = await tx
+        .insert(photoImports)
+        .values({
+          childId: child.id,
+          status: 'confirmed',
+          fileCount: Math.min(Math.max(Math.round(input.screenshots) || 0, 0), 100),
+          recordsParsed: Math.min(Math.max(Math.round(input.recognized) || 0, 0), 1000),
+          recordsEdited: Math.min(Math.max(Math.round(input.edited) || 0, 0), 1000),
+          confirmedAt: now,
+        })
+        .returning({ id: photoImports.id });
+
+      for (const [index, row] of input.rows.entries()) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || row.date > today || row.date < shiftDate(today, -183)) {
+          skipped.push({ index, reason: 'дата не распознана' });
+          continue;
+        }
+        if (!/^\d{1,2}:\d{2}$/.test(row.start) || !/^\d{1,2}:\d{2}$/.test(row.end)) {
+          skipped.push({ index, reason: 'не указано время' });
+          continue;
+        }
+        const startMinutes = parseTimeOfDay(row.start);
+        const endMinutes = parseTimeOfDay(row.end);
+        const startedAt = zonedTimeToUtc(row.date, startMinutes, window.timeZone);
+        const endedAt = zonedTimeToUtc(endMinutes <= startMinutes ? shiftDate(row.date, 1) : row.date, endMinutes, window.timeZone);
+        const minutes = (endedAt.getTime() - startedAt.getTime()) / 60_000;
+        if (minutes < 1 || minutes > 20 * 60) {
+          skipped.push({ index, reason: 'странная длительность' });
+          continue;
+        }
+        if (endedAt.getTime() > now.getTime() + 60_000) {
+          skipped.push({ index, reason: 'время ещё не наступило' });
+          continue;
+        }
+        const [clash] = await tx
+          .select({ startedAt: sleeps.startedAt, endedAt: sleeps.endedAt })
+          .from(sleeps)
+          .where(
+            and(
+              eq(sleeps.childId, child.id),
+              lt(sleeps.startedAt, endedAt),
+              or(isNull(sleeps.endedAt), gt(sleeps.endedAt, startedAt)),
+            ),
+          )
+          .limit(1);
+        if (clash) {
+          skipped.push({
+            index,
+            reason: `пересекается со сном ${time.format(clash.startedAt)}–${clash.endedAt ? time.format(clash.endedAt) : 'сейчас'}`,
+          });
+          continue;
+        }
+        const sleepDay = sleepDayOf(startedAt, window);
+        await tx.insert(sleeps).values({
+          childId: child.id,
+          startedAt,
+          endedAt,
+          sleepDay,
+          kind: sleepKindOf(startedAt, window, endedAt),
+          source: 'photo',
+          importId: batch.id,
+        });
+        added += 1;
+        if (!lastDay || sleepDay > lastDay) lastDay = sleepDay;
+      }
+    });
+
+    revalidatePath('/');
+    revalidatePath('/day');
+    return { added, lastDay, skipped };
   });
 }

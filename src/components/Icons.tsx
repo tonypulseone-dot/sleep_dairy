@@ -69,6 +69,26 @@ export function IconBolt(props: IconProps) {
   return <Svg {...props}><path d="M13 3 5.5 13.5H12l-1 7.5 7.5-10.5H12z" /></Svg>;
 }
 
+export function IconEdit(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 19.5h4l10-10a2.8 2.8 0 0 0-4-4l-10 10z" />
+      <path d="m13.5 6.5 4 4" />
+    </Svg>
+  );
+}
+
+/** Перенос: картинка со стрелкой внутрь — «забрать скриншоты сюда». */
+export function IconImport(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="3.5" width="11" height="15" rx="2.2" />
+      <path d="M7 8h4M7 11.5h3" />
+      <path d="M13.5 16.5h7M17.5 13.5l3 3-3 3" />
+    </Svg>
+  );
+}
+
 export function IconCalendar(props: IconProps) {
   return (
     <Svg {...props}>

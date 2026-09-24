@@ -47,6 +47,11 @@ services:
       LEGAL_INN: ${LEGAL_INN:-}
       LEGAL_EMAIL: ${LEGAL_EMAIL:-}
       LEGAL_HOSTING: ${LEGAL_HOSTING:-}
+      # Перенос снов скриншотами — через GigaChat (Сбер). Пусто — кнопки
+      # переноса в приложении нет.
+      GIGACHAT_AUTH_KEY: ${GIGACHAT_AUTH_KEY:-}
+      GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
+      GIGACHAT_MODEL: ${GIGACHAT_MODEL:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -1,0 +1,1 @@
+ALTER TABLE "parents" ADD COLUMN "import_consent_at" timestamp with time zone;

@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconBottle, IconSettings, IconToy } from '@/components/Icons';
+import { IconBottle, IconImport, IconSettings, IconToy } from '@/components/Icons';
+import { gigachatConfigured } from '@/lib/gigachat';
 import { SexPrompt } from '@/components/SexPrompt';
 import { defaultConsultant } from '@/lib/default-consultant';
 import { SleepToggle } from '@/components/SleepToggle';
@@ -208,6 +209,19 @@ export default async function Home() {
           <span className={styles.manualSub}>забыли отметить — сегодня, вчера или раньше</span>
         </span>
       </Link>
+
+      {/* Сны, которые мама раньше вела в другом приложении, — скриншотами. */}
+      {gigachatConfigured() && (
+        <Link href="/import" className={styles.transfer}>
+          <span className={styles.transferIcon} aria-hidden="true">
+            <IconImport size={20} />
+          </span>
+          <span className={styles.manualText}>
+            <span className={styles.transferTitle}>Перенести из другого приложения</span>
+            <span className={styles.manualSub}>скриншоты или заметки — время перепишем сами</span>
+          </span>
+        </Link>
+      )}
 
       <Link href="/day" className={styles.totals} aria-label="Открыть дневник за сегодня">
         {todayRows.length > 0 ? (

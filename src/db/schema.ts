@@ -88,6 +88,11 @@ export const parents = pgTable(
     /** IANA-зона: от неё зависит, к каким суткам отнести ночной сон. */
     timeZone: text('time_zone').notNull().default('Europe/Moscow'),
     themePref: themePref('theme_pref').notNull().default('auto'),
+    /**
+     * Когда мама согласилась, что скриншоты уходят на распознавание в
+     * GigaChat (ПАО Сбербанк). Пусто — ещё не соглашалась, перенос закрыт.
+     */
+    importConsentAt: timestamp('import_consent_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('parents_telegram_id_key').on(table.telegramId)],
@@ -237,9 +242,10 @@ export const consultantNotes = pgTable(
  * ------------------------------------------------------------------ */
 
 /*
- * Загрузка дневника снимками убрана: распознавание работало через сервис,
- * недоступный с российского сервера. Таблица осталась, чтобы не удалять её
- * миграцией из живой базы; новых записей в ней не появляется.
+ * Один заход «перенести сны из другого приложения»: сколько скриншотов,
+ * сколько снов распознано и сколько мама поправила. Сами скриншоты не
+ * храним — они удаляются сразу после распознавания. Сны переноса
+ * помечены source = 'photo' и importId этой записи.
  */
 export const photoImports = pgTable(
   'photo_imports',

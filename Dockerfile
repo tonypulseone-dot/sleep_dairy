@@ -25,5 +25,18 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/runtime ./runtime
 
+# Серверы GigaChat (Сбер) подписаны российским удостоверяющим центром
+# Минцифры — Node ему по умолчанию не доверяет. Кладём корневой и
+# промежуточный сертификаты в образ и подключаем через NODE_EXTRA_CA_CERTS.
+# Если скачать не вышло, сборка не падает: без сертификата не заработает
+# только перенос скриншотов, и команда проверки об этом скажет.
+RUN mkdir -p /app/certs \
+  && (wget -qO /tmp/root.pem https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt \
+      && wget -qO /tmp/sub.pem https://gu-st.ru/content/lending/russian_trusted_sub_ca_pem.crt \
+      && cat /tmp/root.pem /tmp/sub.pem > /app/certs/russian-trusted-ca.pem \
+      || echo "ВНИМАНИЕ: сертификат Минцифры не скачался — перенос скриншотов через GigaChat работать не будет") \
+  && rm -f /tmp/root.pem /tmp/sub.pem
+ENV NODE_EXTRA_CA_CERTS=/app/certs/russian-trusted-ca.pem
+
 EXPOSE 3000
 CMD ["node", "server.js"]
