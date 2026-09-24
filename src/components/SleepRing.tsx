@@ -109,6 +109,8 @@ export function SleepRing({ segments, dayBoundary, nowMinutes, children }: Props
           );
         })}
 
+        {/* Группа — чтобы ночное приглушение складывалось с «дыханием» идущего сна. */}
+        <g className={styles.arcs}>
         {segments.map((segment, index) => {
           const span = segment.to - segment.from;
           // Короткие сны не подрезаем: от них ничего бы не осталось.
@@ -126,6 +128,7 @@ export function SleepRing({ segments, dayBoundary, nowMinutes, children }: Props
             />
           );
         })}
+        </g>
 
         {/* Метку «сейчас» выносим наружу кольца, иначе она сливается с концом дуги. */}
         {nowMinutes !== null && (

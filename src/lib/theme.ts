@@ -24,3 +24,15 @@ export function resolveTheme(
       : minutes >= window.nightFrom && minutes < window.dayBoundary;
   return isNight ? 'dark' : 'light';
 }
+
+/**
+ * Глубокая ночь — от полуночи до маминой утренней границы. В это время
+ * даже тёмная тема кажется яркой: мама смотрит на экран в полной темноте,
+ * рядом спит ребёнок. Тогда приглушаем цветные пятна (см. data-hush).
+ */
+export function isDeepNight(
+  window: { dayBoundary: number; timeZone: string },
+  now: Date = new Date(),
+): boolean {
+  return localMinutes(now, window.timeZone) < window.dayBoundary;
+}
