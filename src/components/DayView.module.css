@@ -92,7 +92,6 @@
   font-variant-numeric: tabular-nums; letter-spacing: -.01em;
 }
 
-.empty { color: var(--ink-3); font-size: 14px; text-align: center; padding: 26px 0; }
 
 .editor {
   margin-top: 8px;
@@ -134,3 +133,19 @@
 .save:disabled, .ghost:disabled, .danger:disabled { opacity: .6; cursor: default; }
 
 .error { color: var(--danger); font-size: 14px; margin: 0; }
+
+/* Пустой день: тёплая подсказка вместо четырёх нулей. */
+.emptyCard {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center;
+  padding: 26px 22px 24px;
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+}
+.emptyIcon {
+  width: 52px; height: 52px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--night-soft); color: var(--night-ink);
+  margin-bottom: 4px;
+}
+.emptyTitle { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0; }
+.emptyText { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); max-width: 34ch; }

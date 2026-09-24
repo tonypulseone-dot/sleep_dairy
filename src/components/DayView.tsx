@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
-import { IconBack, IconForward } from './Icons';
+import { IconBack, IconForward, IconMoon } from './Icons';
 import { childWords, type ChildSex } from '@/lib/words';
 import { BackButton } from './BackButton';
 
@@ -117,6 +117,25 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
         </div>
       </header>
 
+      {rows.length === 0 ? (
+        /*
+          Четыре «0:00» подряд выглядели как поломка. Пустой день — не ошибка:
+          говорим, что делать дальше, и для сегодняшнего дня, и для прошлого.
+        */
+        <section className={styles.emptyCard}>
+          <span className={styles.emptyIcon} aria-hidden="true">
+            <IconMoon size={26} />
+          </span>
+          <h2 className={styles.emptyTitle}>
+            {nextDay === null ? 'Сегодня записей пока нет' : 'В этот день записей нет'}
+          </h2>
+          <p className={styles.emptyText}>
+            {nextDay === null
+              ? 'Когда малыш уснёт, нажмите большую кнопку на главном экране — сон появится здесь сам. Забыли отметить? Добавьте его вручную.'
+              : 'Если помните, как прошёл день, добавьте сны вручную — ориентиры по режиму станут точнее.'}
+          </p>
+        </section>
+      ) : (
       <section className={styles.totals} aria-label="Итоги дня">
         <div>
           <span className={styles.totalValue}>{totals.totalSleep}</span>
@@ -135,9 +154,9 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
           <span className={styles.totalLabel}>бодрствование</span>
         </div>
       </section>
+      )}
 
       <ul className={styles.list}>
-        {rows.length === 0 && <li className={styles.empty}>За этот день записей нет</li>}
 
         {rows.map((row) => (
           <li key={row.id}>
