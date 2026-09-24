@@ -1,7 +1,7 @@
-import { and, asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { sleeps } from '@/db/schema';
-import { currentChild, currentParent } from '@/lib/session';
+import { accessGrants, children, parents, sleeps } from '@/db/schema';
+import { currentConsultant } from '@/lib/pro-session';
 import {
   averageTotalSleep,
   formatDuration,
@@ -18,6 +18,9 @@ import {
  * Виктория: «функция выгрузки дневника в стороннюю таблицу, Excel, PDF,
  * вообще любой формат» и «должна быть возможность указывать период».
  *
+ * Выгрузка есть только в кабинете консультанта: маме таблица не нужна, а в
+ * Telegram скачивание файла уводило её со страницы без пути назад.
+ *
  * Отдаём CSV, потому что он открывается всюду. Две детали, без которых
  * русский Excel показывает кашу вместо букв: метка BOM в начале файла и
  * точка с запятой вместо запятой — в русской локали запятая занята под
@@ -30,12 +33,28 @@ function cell(value: string): string {
   return value.includes(';') || value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-export async function GET(request: Request) {
-  const parent = await currentParent();
-  if (!parent) return new Response('Нужно открыть приложение', { status: 401 });
+export async function GET(request: Request, { params }: { params: Promise<{ childId: string }> }) {
+  const consultant = await currentConsultant();
+  if (!consultant) return new Response('Нужно войти в кабинет', { status: 401 });
 
-  const child = await currentChild(parent.id);
-  if (!child) return new Response('Ребёнок не заведён', { status: 404 });
+  const { childId } = await params;
+  // Как и карточка клиентки: только пока мама не закрыла доступ.
+  const [access] = await db
+    .select({ id: accessGrants.id })
+    .from(accessGrants)
+    .where(
+      and(
+        eq(accessGrants.childId, childId),
+        eq(accessGrants.consultantId, consultant.id),
+        isNull(accessGrants.revokedAt),
+      ),
+    )
+    .limit(1);
+  if (!access) return new Response('Нет доступа к этому дневнику', { status: 404 });
+
+  const [child] = await db.select().from(children).where(eq(children.id, childId)).limit(1);
+  if (!child) return new Response('Дневник не найден', { status: 404 });
+  const [parent] = await db.select().from(parents).where(eq(parents.id, child.parentId)).limit(1);
 
   const window: DayWindow = {
     dayBoundary: child.dayBoundaryMinutes,

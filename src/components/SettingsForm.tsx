@@ -214,18 +214,6 @@ export function SettingsForm(props: Props) {
 
 
       <section className={styles.block}>
-        <h2>Выгрузка</h2>
-        <p className={styles.hint}>Таблица со снами за выбранный период — открывается в Excel.</p>
-        <div className={styles.chips}>
-          {[7, 14, 30].map((days) => (
-            <a key={days} href={`/export?days=${days}`} className={styles.chip} download>
-              за {days} дней
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.block}>
         <h2>Доступ к дневнику</h2>
         <p className={styles.hint}>Кто из консультантов видит ваши записи.</p>
         <Link href="/consultant" className={styles.link}>
@@ -251,8 +239,8 @@ export function SettingsForm(props: Props) {
 
         {/*
           Удаление в два шага. Первый — обычная неяркая кнопка: промахнуться
-          мимо неё не страшно. Второй — то, что именно исчезнет, и предложение
-          сначала выгрузить дневник: отменить это действие уже нельзя.
+          мимо неё не страшно. Второй — прямо сказать, что именно исчезнет:
+          отменить это действие уже нельзя.
         */}
         {!confirming ? (
           <button type="button" className={styles.danger} onClick={() => setConfirming(true)}>
@@ -264,9 +252,6 @@ export function SettingsForm(props: Props) {
               Исчезнут все записи о снах и кормлениях, данные малыша и доступ консультанта.
               Восстановить их будет нельзя.
             </p>
-            <a href="/export?days=365" className={styles.link} download>
-              Сначала скачать дневник таблицей
-            </a>
             <button
               type="button"
               className={styles.danger}
