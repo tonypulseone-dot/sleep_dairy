@@ -101,17 +101,28 @@ export function sleepDayOf(at: Date, window: DayWindow): string {
 }
 
 /**
- * Дневной сон или ночной — по времени начала.
- * Ночь — это интервал [nightFrom, dayBoundary), который перешагивает полночь.
+ * Дневной сон или ночной.
+ *
+ * Ночь — это интервал [nightFrom, dayBoundary), который перешагивает полночь:
+ * уснул в нём — сон ночной. Но и сон, начатый чуть раньше «ночи» (уложили
+ * в 18:40 при границе 19:00), ночной, если малыш проспал до утра: сон,
+ * который переходит утреннюю границу, — это ночь, а не дневной сон.
+ * Поэтому, когда конец известен, смотрим и на него.
  */
-export function sleepKindOf(startedAt: Date, window: DayWindow): SleepKind {
+export function sleepKindOf(startedAt: Date, window: DayWindow, endedAt?: Date | null): SleepKind {
   const { minutes } = localParts(startedAt, window.timeZone);
-  if (window.nightFrom > window.dayBoundary) {
-    // Обычный случай: ночь с 19:00 до 06:00.
-    return minutes >= window.nightFrom || minutes < window.dayBoundary ? 'night' : 'day';
+  const byStart =
+    window.nightFrom > window.dayBoundary
+      ? // Обычный случай: ночь с 19:00 до 06:00.
+        minutes >= window.nightFrom || minutes < window.dayBoundary
+      : // Вырожденный случай, когда мама выставила границы наоборот.
+        minutes >= window.nightFrom && minutes < window.dayBoundary;
+  if (byStart) return 'night';
+  if (endedAt) {
+    const nextMorning = dayStartInstant(shiftDate(sleepDayOf(startedAt, window), 1), window);
+    if (endedAt.getTime() > nextMorning.getTime()) return 'night';
   }
-  // Вырожденный случай, когда мама выставила границы наоборот.
-  return minutes >= window.nightFrom && minutes < window.dayBoundary ? 'night' : 'day';
+  return 'day';
 }
 
 /** Длительность в минутах. Незакрытый сон считаем до `now`. */
@@ -171,7 +182,7 @@ export function summarizeDay(
       wakeWindows.push(durationMinutes(previousEnd, record.startedAt, now));
     }
     const minutes = durationMinutes(record.startedAt, record.endedAt, now);
-    if (sleepKindOf(record.startedAt, window) === 'night') {
+    if (sleepKindOf(record.startedAt, window, record.endedAt) === 'night') {
       nightSleep += minutes;
     } else {
       daySleep += minutes;
@@ -321,7 +332,7 @@ export function daySegments(
       return {
         from,
         to,
-        kind: sleepKindOf(record.startedAt, window),
+        kind: sleepKindOf(record.startedAt, window, record.endedAt),
         ongoing: record.endedAt === null,
       };
     })

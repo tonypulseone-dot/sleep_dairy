@@ -57,6 +57,13 @@
       "when": 1790210806426,
       "tag": "0007_activity_energy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790234591073,
+      "tag": "0008_night_through_morning",
+      "breakpoints": true
     }
   ]
 }

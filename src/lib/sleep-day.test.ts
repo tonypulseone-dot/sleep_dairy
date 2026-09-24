@@ -194,3 +194,15 @@ test('сон нулевой длины на круге не рисуется', (
   );
   assert.equal(segments.length, 0);
 });
+
+test('сон, проспанный до утра, — ночной, даже если уложили до «ночи»', () => {
+  const w = { dayBoundary: 360, nightFrom: 1140, timeZone: 'Europe/Moscow' };
+  // 18:40 → 06:30 по Москве: начался днём, но перешёл утреннюю границу.
+  const start = new Date('2026-09-23T15:40:00Z');
+  assert.equal(sleepKindOf(start, w), 'day');
+  assert.equal(sleepKindOf(start, w, new Date('2026-09-24T03:30:00Z')), 'night');
+  // Вечерний сон 18:40 → 19:20 остаётся дневным.
+  assert.equal(sleepKindOf(start, w, new Date('2026-09-23T16:20:00Z')), 'day');
+  // 21:00 → 08:30 — ночной по началу.
+  assert.equal(sleepKindOf(new Date('2026-09-23T18:00:00Z'), w, new Date('2026-09-24T05:30:00Z')), 'night');
+});

@@ -78,7 +78,7 @@ export async function startSleep(minutesAgo = 0) {
 /** Ребёнок проснулся. `minutesAgo` — если проснулся раньше, чем мама отметила. */
 export async function stopSleep(minutesAgo = 0) {
   return guard(async () => {
-    const { child } = await requireContext();
+    const { child, window } = await requireContext();
 
     const open = await openSleepOf(child.id);
     if (!open) return;
@@ -92,7 +92,8 @@ export async function stopSleep(minutesAgo = 0) {
 
     await db
       .update(sleeps)
-      .set({ endedAt, updatedAt: now })
+      // Тип уточняем по концу: уложили до «ночи», а проспал до утра — это ночь.
+      .set({ endedAt, kind: sleepKindOf(open.startedAt, window, endedAt), updatedAt: now })
       .where(eq(sleeps.id, open.id));
     revalidatePath('/');
   });
@@ -195,7 +196,7 @@ function build(input: SleepInput, window: DayWindow) {
     startedAt,
     endedAt,
     sleepDay: sleepDayOf(startedAt, window),
-    kind: sleepKindOf(startedAt, window),
+    kind: sleepKindOf(startedAt, window, endedAt),
   };
 }
 
@@ -321,7 +322,7 @@ async function recomputeSleepDays(childId: string, window: DayWindow) {
   const rows = await db.select().from(sleeps).where(eq(sleeps.childId, childId));
   for (const row of rows) {
     const sleepDay = sleepDayOf(row.startedAt, window);
-    const kind = sleepKindOf(row.startedAt, window);
+    const kind = sleepKindOf(row.startedAt, window, row.endedAt);
     if (sleepDay !== row.sleepDay || kind !== row.kind) {
       await db.update(sleeps).set({ sleepDay, kind }).where(eq(sleeps.id, row.id));
     }

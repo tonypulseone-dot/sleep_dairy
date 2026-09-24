@@ -87,6 +87,42 @@ function toMinutes(value: string): number | null {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
+const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+/** «23 сентября». */
+function dayLabel(date: string): string {
+  return `${Number(date.slice(8))} ${MONTHS[Number(date.slice(5, 7)) - 1]}`;
+}
+
+/** «ночь с 23 на 24 сентября» — однозначно, какая это ночь. */
+function nightLabel(date: string): string {
+  const next = shiftDay(date, 1);
+  return next.slice(5, 7) === date.slice(5, 7)
+    ? `ночь с ${Number(date.slice(8))} на ${dayLabel(next)}`
+    : `ночь с ${dayLabel(date)} на ${dayLabel(next)}`;
+}
+
+/**
+ * Где на календаре окажется сон — так же, как его разложит сервер
+ * (composeSleep): время до утренней границы — уже следующее число, конец
+ * не позже начала — следующие сутки.
+ */
+function placeSleep(draft: Draft, dayBoundary: number) {
+  const from = toMinutes(draft.start);
+  const to = toMinutes(draft.end);
+  if (from === null || to === null) return null;
+  const startDate = from < dayBoundary ? shiftDay(draft.day, 1) : draft.day;
+  const endDate = to <= from ? shiftDay(startDate, 1) : startDate;
+  const nextMorning = shiftDay(draft.day, 1);
+  const pad = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  const now = new Date();
+  const local = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${pad(now.getHours() * 60 + now.getMinutes())}`;
+  return {
+    throughMorning: endDate > nextMorning || (endDate === nextMorning && to > dayBoundary),
+    inFuture: `${endDate}T${pad(to)}` > local,
+  };
+}
+
 /** «1 ч 30 мин» — длительность между двумя «14:00», через полночь тоже. */
 function spanText(start: string, end: string): string | null {
   const from = toMinutes(start);
@@ -298,12 +334,19 @@ function Editor({
   onDelete?: () => void;
 }) {
   const span = spanText(draft.start, draft.end);
+  const placed = placeSleep(draft, window.dayBoundary);
   const startMinutes = toMinutes(draft.start);
+  // То же правило, что на сервере (sleepKindOf): уснул «ночью» — или проспал
+  // за утреннюю границу — значит, ночной.
   const night =
     startMinutes !== null &&
-    (window.nightFrom > window.dayBoundary
+    ((window.nightFrom > window.dayBoundary
       ? startMinutes >= window.nightFrom || startMinutes < window.dayBoundary
-      : startMinutes >= window.nightFrom && startMinutes < window.dayBoundary);
+      : startMinutes >= window.nightFrom && startMinutes < window.dayBoundary) ||
+      (placed !== null && placed.throughMorning));
+  // Мама вносит ночь, которая закончилась сегодня утром, а день стоит «Сегодня»:
+  // такой сон оказался бы в будущем. Подсказываем и переносим одним нажатием.
+  const lastNight = days && placed?.inFuture && draft.day === days.today ? shiftDay(days.today, -1) : null;
 
   const quick = days
     ? [
@@ -363,12 +406,24 @@ function Editor({
         </label>
       </div>
 
-      {span && (
+      {span && placed && (
         <p className={styles.preview}>
           <KindMark kind={night ? 'night' : 'day'} />
-          {night ? 'Ночной' : 'Дневной'} сон · <b>{span}</b>
-          {night && ` · если ${words.wokeUp.toLowerCase()} после полуночи, ночь всё равно запишется целиком`}
+          {night ? `Ночной сон, ${nightLabel(draft.day)}` : `Дневной сон, ${dayLabel(draft.day)}`} ·{' '}
+          <b>{span}</b>
         </p>
+      )}
+
+      {lastNight && (
+        <div className={styles.warn} role="status">
+          <span>
+            {words.wokeUp} в {draft.end} — это время сегодня ещё не наступило. Если это прошлая ночь,
+            она относится к суткам {dayLabel(lastNight)}.
+          </span>
+          <button type="button" className={styles.warnButton} onClick={() => onChange({ ...draft, day: lastNight })}>
+            Да, это {nightLabel(lastNight)}
+          </button>
+        </div>
       )}
 
       <div className={styles.editorActions}>
