@@ -9,6 +9,7 @@
  *   docker compose exec app node runtime/gigachat-check.cjs --text "днём 9:30-10:45, ночь 20:15-6:40"
  *       — то же для заметок.
  */
+import { X509Certificate } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { askGigaChat, GIGACHAT_MODEL, gigachatConfigured, listModels } from '../src/lib/gigachat';
 import { notesPrompt, parseRecognized, screenshotPrompt } from '../src/lib/import-parse';
@@ -18,9 +19,24 @@ async function main() {
   console.log('Модель:', GIGACHAT_MODEL, '| scope:', process.env.GIGACHAT_SCOPE || 'GIGACHAT_API_PERS');
   console.log('Ключ задан:', gigachatConfigured() ? 'да' : 'НЕТ — впишите GIGACHAT_AUTH_KEY в .env и перезапустите: docker compose up -d');
 
+  // Каждый сертификат разбираем по-настоящему: файл может быть на месте,
+  // но склеен криво, и тогда Node его молча не подхватит.
   const ca = process.env.NODE_EXTRA_CA_CERTS;
-  const certs = ca && existsSync(ca) ? (readFileSync(ca, 'utf8').match(/BEGIN CERTIFICATE/g) ?? []).length : 0;
-  console.log('Сертификат Минцифры:', certs > 0 ? `есть (${certs} шт., ${ca})` : 'НЕТ — пересоберите образ: docker compose build app');
+  const blocks = ca && existsSync(ca) ? readFileSync(ca, 'utf8').match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) ?? [] : [];
+  const names: string[] = [];
+  for (const block of blocks) {
+    try {
+      names.push(new X509Certificate(block).subject.replace(/\n/g, ', '));
+    } catch {
+      names.push('НЕ ЧИТАЕТСЯ');
+    }
+  }
+  console.log(
+    'Сертификат Минцифры:',
+    names.length === 0
+      ? 'НЕТ — пересоберите образ: docker compose build app'
+      : `${ca}\n  ${names.map((name) => `• ${name}`).join('\n  ')}`,
+  );
   if (!gigachatConfigured()) process.exit(1);
 
   const models = await listModels();
