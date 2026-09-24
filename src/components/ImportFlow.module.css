@@ -119,6 +119,9 @@
 .row:first-child { border-top: none; }
 .rowOff .span, .rowOff .duration, .rowOff .kindDay, .rowOff .kindNight { opacity: .45; }
 .rowOff .span { text-decoration: line-through; }
+.rowDoubt .span { color: var(--day-ink); }
+.rowDoubt { background: linear-gradient(90deg, var(--day-soft), transparent 70%); border-radius: 10px; }
+.doubt { grid-column: 3 / -1; margin: -6px 0 6px; font-size: 12.5px; line-height: 1.35; color: var(--day-ink); }
 .check { width: 44px; height: 44px; display: grid; place-items: center; margin-left: -10px; }
 .kindDay, .kindNight { display: grid; place-items: center; }
 .kindDay { color: var(--day); }

@@ -18,7 +18,7 @@ import styles from './ImportFlow.module.css';
  * нажимает «Добавить». Без её подтверждения в дневник не попадает ничего.
  */
 
-const MAX_SHOTS = 10;
+const MAX_SHOTS = 20;
 
 interface Row {
   id: number;
@@ -27,12 +27,17 @@ interface Row {
   end: string;
   include: boolean;
   edited: boolean;
+  /** Время не сошлось с длительностью на скриншоте — пусть мама посмотрит. */
+  doubtful: boolean;
+  /** Длительность, написанная на скриншоте. */
+  stated: number | null;
 }
 
 interface Recognized {
   date: string | null;
-  sleeps: { date: string | null; start: string; end: string }[];
+  sleeps: { date: string | null; start: string; end: string; doubtful: boolean; stated: number | null }[];
   timesVisible: boolean;
+  screen: 'list' | 'stats' | 'chart' | 'other';
 }
 
 type Phase = 'pick' | 'working' | 'review' | 'done';
@@ -145,6 +150,8 @@ export function ImportFlow({
       end: sleep.end,
       include: true,
       edited: false,
+      doubtful: sleep.doubtful,
+      stated: sleep.stated,
     }));
     recognizedCount.current += fresh.length;
     setRows((current) => {
@@ -170,11 +177,14 @@ export function ImportFlow({
         const found = await recognize(body);
         const count = addRecognized(found, null);
         if (count === 0) {
+          const number = `Скриншот ${index + 1}`;
           setNotes((current) => [
             ...current,
-            found.timesVisible
-              ? `На скриншоте ${index + 1} снов не нашлось.`
-              : `На скриншоте ${index + 1} не видно времени снов — откройте в приложении список за день, где написано «13:05–14:20», и сделайте скриншот его.`,
+            found.screen === 'stats'
+              ? `${number} — это статистика с итогами за дни: в ней нет времени каждого сна. Откройте в приложении ленту снов за день.`
+              : found.screen === 'chart' || !found.timesVisible
+                ? `${number}: не видно времени снов — нужна лента за день, где написано «11:07», «11:43», а не график.`
+                : `${number}: снов не нашлось.`,
           ]);
         }
       } catch (cause) {
@@ -207,7 +217,11 @@ export function ImportFlow({
   };
 
   const update = (id: number, patch: Partial<Row>) =>
-    setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch, edited: true } : row)));
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id ? { ...row, ...patch, edited: true, doubtful: 'start' in patch || 'end' in patch ? false : row.doubtful } : row,
+      ),
+    );
 
   const moveGroup = (from: string | null, to: string) =>
     setRows((current) => current.map((row) => (row.date === from ? { ...row, date: to, edited: row.edited || from !== null } : row)));
@@ -339,12 +353,15 @@ export function ImportFlow({
               <h2 className={styles.cardTitle}>Какой скриншот подойдёт</h2>
               <ul className={styles.tips}>
                 <li className={styles.good}>
-                  Список снов за день, где видно время: <b>«13:05–14:20»</b> или «сон 1:15, с 13:05».
+                  Лента снов за день, где видно время: <b>«11:07»</b> и <b>«11:43»</b> у каждого сна, или «13:05–14:20».
+                </li>
+                <li className={styles.good}>
+                  По скриншоту на день. Лента длинная — сделайте два, повторы уберём сами.
                 </li>
                 <li className={styles.bad}>
-                  Графики и цветные полоски без цифр — по ним время можно только угадать.
+                  Статистика с итогами за дни и графики без цифр — в них нет времени каждого сна.
                 </li>
-                <li className={styles.good}>Можно выбрать до {MAX_SHOTS} скриншотов сразу — за разные дни.</li>
+                <li className={styles.good}>До {MAX_SHOTS} скриншотов за раз.</li>
               </ul>
               <label className={styles.upload}>
                 <input
@@ -459,7 +476,7 @@ export function ImportFlow({
                   </label>
                   <ul className={styles.rows}>
                     {list.map((row) => (
-                      <li key={row.id} className={`${styles.row} ${row.include ? '' : styles.rowOff}`}>
+                      <li key={row.id} className={`${styles.row} ${row.include ? '' : styles.rowOff} ${row.doubtful ? styles.rowDoubt : ''}`}>
                         <label className={styles.check}>
                           <input
                             type="checkbox"
@@ -486,6 +503,13 @@ export function ImportFlow({
                         >
                           <IconEdit size={18} />
                         </button>
+                        {row.doubtful && editing !== row.id && (
+                          <p className={styles.doubt}>
+                            {row.stated
+                              ? `На скриншоте сон длится ${Math.floor(row.stated / 60)}:${String(row.stated % 60).padStart(2, '0')}, а по времени — ${spanText(row.start, row.end)}. Сверьте время`
+                              : 'Время не сходится с длительностью на скриншоте — сверьте'}
+                          </p>
+                        )}
                         {editing === row.id && (
                           <div className={styles.editor}>
                             <label className={styles.timeField}>

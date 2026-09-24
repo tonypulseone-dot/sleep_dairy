@@ -14,6 +14,7 @@ import {
   sleeps,
 } from '@/db/schema';
 import { CONSENT_VERSION } from '@/lib/consent';
+import { MAX_AGE_DAYS } from '@/lib/import-parse';
 import { defaultConsultant } from '@/lib/default-consultant';
 import type { ChildSex } from '@/lib/words';
 import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
@@ -556,7 +557,7 @@ export async function commitImport(input: {
         .returning({ id: photoImports.id });
 
       for (const [index, row] of input.rows.entries()) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || row.date > today || row.date < shiftDate(today, -183)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || row.date > today || row.date < shiftDate(today, -MAX_AGE_DAYS)) {
           skipped.push({ index, reason: 'дата не распознана' });
           continue;
         }
