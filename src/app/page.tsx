@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconSettings } from '@/components/Icons';
+import { IconBottle, IconSettings, IconSparkle } from '@/components/Icons';
 import { SexPrompt } from '@/components/SexPrompt';
 import { defaultConsultant } from '@/lib/default-consultant';
 import { SleepToggle } from '@/components/SleepToggle';
@@ -203,36 +203,63 @@ export default async function Home() {
       <Link href="/day" className={styles.totals} aria-label="Открыть дневник за сегодня">
         {todayRows.length > 0 ? (
           <>
-            <div className={styles.total}>
-              <span className={styles.totalValue}>{formatDuration(totals.daySleep)}</span>
-              <span className={styles.totalLabel}>дневной</span>
+            <div className={styles.totalsRow}>
+              <div className={styles.total}>
+                <span className={styles.totalValue}>{formatDuration(totals.daySleep)}</span>
+                <span className={styles.totalLabel}>
+                  <i className={`${styles.dot} ${styles.dotDay}`} aria-hidden="true" />
+                  дневной
+                </span>
+              </div>
+              <div className={styles.divider} aria-hidden="true" />
+              <div className={styles.total}>
+                <span className={styles.totalValue}>{formatDuration(totals.nightSleep)}</span>
+                <span className={styles.totalLabel}>
+                  <i className={`${styles.dot} ${styles.dotNight}`} aria-hidden="true" />
+                  ночной
+                </span>
+              </div>
+              <div className={styles.divider} aria-hidden="true" />
+              <div className={styles.total}>
+                <span className={styles.totalValue}>{formatDuration(totals.totalSleep)}</span>
+                <span className={styles.totalLabel}>за сутки</span>
+              </div>
             </div>
-            <div className={styles.divider} aria-hidden="true" />
-            <div className={styles.total}>
-              <span className={styles.totalValue}>{formatDuration(totals.nightSleep)}</span>
-              <span className={styles.totalLabel}>ночной</span>
-            </div>
-            <div className={styles.divider} aria-hidden="true" />
-            <div className={styles.total}>
-              <span className={styles.totalValue}>{formatDuration(totals.totalSleep)}</span>
-              <span className={styles.totalLabel}>за сутки</span>
-            </div>
+            {/* Из чего сложились сутки — одной полоской, теми же цветами, что на кольце. */}
+            {totals.totalSleep > 0 && (
+              <div className={styles.split} aria-hidden="true">
+                {totals.daySleep > 0 && <i className={styles.splitDay} style={{ flexGrow: totals.daySleep }} />}
+                {totals.nightSleep > 0 && <i className={styles.splitNight} style={{ flexGrow: totals.nightSleep }} />}
+              </div>
+            )}
           </>
         ) : (
           <span className={styles.empty}>Записей пока нет — открыть дневник</span>
         )}
       </Link>
 
-      <div className={styles.links}>
+      <nav className={styles.tiles} aria-label="Разделы">
         {child.feedingType !== 'breast' && (
-          <Link href="/feeding" className={styles.secondary}>
-            Кормления
+          <Link href="/feeding" className={`${styles.tile} ${styles.tileFeeding}`}>
+            <span className={styles.tileIcon} aria-hidden="true">
+              <IconBottle />
+            </span>
+            <span className={styles.tileText}>
+              <span className={styles.tileTitle}>Кормления</span>
+              <span className={styles.tileSub}>объём и время</span>
+            </span>
           </Link>
         )}
-        <Link href="/activities" className={styles.secondary}>
-          Чем заняться
+        <Link href="/activities" className={`${styles.tile} ${styles.tileActivities}`}>
+          <span className={styles.tileIcon} aria-hidden="true">
+            <IconSparkle />
+          </span>
+          <span className={styles.tileText}>
+            <span className={styles.tileTitle}>Чем заняться</span>
+            <span className={styles.tileSub}>игры по возрасту</span>
+          </span>
         </Link>
-      </div>
+      </nav>
     </main>
   );
 }

@@ -10,6 +10,7 @@ import { resolveTheme, type ThemePref } from '@/lib/theme';
 import { parseTimeOfDay } from '@/lib/sleep-day';
 import styles from './SettingsForm.module.css';
 import { BackButton } from './BackButton';
+import { IconHeart, IconMoon, IconShield, IconSun, IconUser } from './Icons';
 
 /** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
 const ZONES = [
@@ -140,7 +141,7 @@ export function SettingsForm(props: Props) {
       </header>
 
       <section className={styles.block}>
-        <h2>Оформление</h2>
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeLook}`}><IconSun size={16} /></span>Оформление</h2>
         <p className={styles.hint}>
           «По времени суток» — днём светлая, ночью тёмная, по границам ваших суток.
         </p>
@@ -160,7 +161,7 @@ export function SettingsForm(props: Props) {
       </section>
 
       <section className={styles.block}>
-        <h2>{props.childName}</h2>
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeChild}`}><IconHeart size={16} /></span>{props.childName}</h2>
         <p className={styles.hint}>Чтобы писать «уснул» или «уснула».</p>
         <div className={styles.chips}>
           {(
@@ -183,7 +184,7 @@ export function SettingsForm(props: Props) {
       </section>
 
       <section className={styles.block}>
-        <h2>Сутки</h2>
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeDay}`}><IconMoon size={16} /></span>Сутки</h2>
         <p className={styles.hint}>
           От этого зависит, к какому дню отнести ночной сон. Если уложились в 00:30, это ещё
           вчерашние сутки — и в дневнике так и будет.
@@ -214,7 +215,7 @@ export function SettingsForm(props: Props) {
 
 
       <section className={styles.block}>
-        <h2>Доступ к дневнику</h2>
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeAccess}`}><IconUser size={16} /></span>Доступ к дневнику</h2>
         <p className={styles.hint}>Кто из консультантов видит ваши записи.</p>
         <Link href="/consultant" className={styles.link}>
           Мой консультант
@@ -229,7 +230,7 @@ export function SettingsForm(props: Props) {
       </button>
 
       <section className={styles.block}>
-        <h2>Данные</h2>
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeData}`}><IconShield size={16} /></span>Данные</h2>
         <p className={styles.hint}>
           Что мы храним, кому показываем и как это удалить — написано в политике.
         </p>

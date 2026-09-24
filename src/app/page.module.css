@@ -39,9 +39,10 @@
 
 .totals {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  gap: 4px;
+  gap: 12px;
   padding: 16px 14px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -53,7 +54,18 @@
 }
 .totals:hover { border-color: var(--ink-3); }
 
+.totalsRow { display: flex; align-items: center; gap: 4px; }
 .total { flex: 1; text-align: center; }
+
+/* Цветные метки видов сна — у подписей, сами цифры остаются цветом текста. */
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.dotDay { background: var(--day); }
+.dotNight { background: var(--night); }
+
+/* Полоска соотношения: сколько дня и сколько ночи в сутках. */
+.split { display: flex; gap: 2px; height: 6px; border-radius: 999px; overflow: hidden; }
+.splitDay { background: var(--day); }
+.splitNight { background: var(--night); }
 
 .totalValue {
   display: block;
@@ -63,7 +75,7 @@
   letter-spacing: -.01em;
 }
 
-.totalLabel { font-size: 12px; color: var(--ink-3); }
+.totalLabel { font-size: 12.5px; color: var(--ink-2); }
 
 .divider { width: 1px; align-self: stretch; background: var(--line-soft); }
 
@@ -96,22 +108,6 @@
   text-wrap: balance;
 }
 
-/* Второй дневник — тихой ссылкой: он нужен не всем и не должен спорить с итогами. */
-.secondary {
-  align-self: center;
-  font-size: 14.5px;
-  color: var(--ink-2);
-  border: 1px solid var(--line);
-  text-decoration: none;
-  min-height: 44px;
-  display: inline-flex; align-items: center;
-  padding: 0 18px;
-  border-radius: 999px;
-  transition: color 140ms ease, background 140ms ease;
-}
-.secondary:hover { color: var(--ink); background: var(--surface); }
-
-.links { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
 
 /* Разовое приглашение открыть дневник консультанту. */
 .invite {
@@ -122,3 +118,26 @@
 }
 .inviteTitle { color: var(--ink); font-weight: 600; font-size: 15px; }
 .inviteText { color: var(--ink-2); font-size: 14px; }
+
+/* Разделы — плитками со своим цветом: их находят по цвету, не вчитываясь. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile {
+  --t: var(--accent); --t-soft: var(--surface); --t-ink: var(--ink);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  min-height: 64px; padding: 14px 14px 13px;
+  border-radius: var(--radius); text-decoration: none;
+  background: var(--t-soft); border: 1px solid transparent;
+  transition: transform 120ms ease, border-color 140ms ease;
+}
+.tile:hover { border-color: var(--t); }
+.tile:active { transform: scale(.98); }
+.tileFeeding { --t: var(--energy-active); --t-soft: var(--energy-active-soft); --t-ink: var(--energy-active-ink); }
+.tileActivities { --t: var(--energy-explore); --t-soft: var(--energy-explore-soft); --t-ink: var(--energy-explore-ink); }
+.tileIcon {
+  width: 36px; height: 36px; flex: none; border-radius: 12px;
+  display: grid; place-items: center;
+  background: var(--t); color: var(--surface);
+}
+.tileText { display: flex; flex-direction: column; min-width: 0; }
+.tileTitle { font-size: 15px; font-weight: 600; color: var(--t-ink); }
+.tileSub { font-size: 12.5px; color: var(--t-ink); opacity: .85; }

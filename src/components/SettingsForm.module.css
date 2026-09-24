@@ -68,3 +68,15 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
   min-height: 44px; border-radius: 12px;
   border: none; background: none; color: var(--ink-2); font-size: 14px;
 }
+
+/* Разделы с цветными значками: настройки находят по цвету, не читая заголовки подряд. */
+.title { display: flex; align-items: center; gap: 10px; }
+.badge {
+  width: 30px; height: 30px; flex: none; border-radius: 10px;
+  display: grid; place-items: center; color: var(--surface);
+}
+.badgeLook { background: var(--energy-explore); }
+.badgeChild { background: var(--energy-active); }
+.badgeDay { background: var(--night); }
+.badgeAccess { background: var(--accent); }
+.badgeData { background: var(--ink-2); }

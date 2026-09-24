@@ -45,7 +45,7 @@
   place-items: center;
 }
 
-/* Глубокая ночь: дуги снов и подсветка часа тише. */
-:global(:root[data-hush]) .arcs { opacity: .68; }
-:global(:root[data-hush]) .hour,
-:global(:root[data-hush]) .nowHalo { opacity: .1; }
+/* Глубокая ночь в тёмной теме: дуги снов и подсветка часа тише. */
+:global(:root[data-theme='dark'][data-hush]) .arcs { opacity: .68; }
+:global(:root[data-theme='dark'][data-hush]) .hour,
+:global(:root[data-theme='dark'][data-hush]) .nowHalo { opacity: .1; }

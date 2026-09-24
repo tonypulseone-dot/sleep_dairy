@@ -77,3 +77,29 @@ export function IconSparkle(props: IconProps) {
     </Svg>
   );
 }
+
+export function IconBottle(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M10 2.8h4M10.5 2.8v2.4L9 7.4v11.2A2.4 2.4 0 0 0 11.4 21h1.2a2.4 2.4 0 0 0 2.4-2.4V7.4l-1.5-2.2V2.8" />
+      <path d="M9 11h6M9 14.5h6" />
+    </Svg>
+  );
+}
+
+export function IconHeart(props: IconProps) {
+  return <Svg {...props}><path d="M12 19.5s-7-4.3-7-9.4A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7 2.1c0 5.1-7 9.4-7 9.4z" /></Svg>;
+}
+
+export function IconUser(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 19.5c1.2-3.3 3.8-5 7-5s5.8 1.7 7 5" />
+    </Svg>
+  );
+}
+
+export function IconShield(props: IconProps) {
+  return <Svg {...props}><path d="M12 3.5 5.5 6v5.3c0 4.2 2.8 7.5 6.5 9.2 3.7-1.7 6.5-5 6.5-9.2V6z" /><path d="m9.3 12 2 2 3.6-3.8" /></Svg>;
+}
