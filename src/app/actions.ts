@@ -63,7 +63,17 @@ export async function startSleep(minutesAgo = 0) {
     // Двойное нажатие не должно плодить параллельные сны.
     if (await openSleepOf(child.id)) return;
 
-    const startedAt = shiftBack(new Date(), minutesAgo);
+    let startedAt = shiftBack(new Date(), minutesAgo);
+    // «Уснула 15 мин назад» сразу после записанного сна не должно залезать
+    // внутрь него: начинаем не раньше, чем закончился предыдущий.
+    const [overlap] = await db
+      .select({ endedAt: sleeps.endedAt })
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), gt(sleeps.endedAt, startedAt)))
+      .orderBy(desc(sleeps.endedAt))
+      .limit(1);
+    if (overlap?.endedAt) startedAt = overlap.endedAt;
+
     await db.insert(sleeps).values({
       childId: child.id,
       startedAt,
@@ -84,10 +94,21 @@ export async function stopSleep(minutesAgo = 0) {
     if (!open) return;
 
     const now = new Date();
-    let endedAt = shiftBack(now, minutesAgo);
-    // Сон не может закончиться раньше, чем начался: округляем до минуты сна.
-    if (endedAt.getTime() < open.startedAt.getTime()) {
-      endedAt = new Date(open.startedAt.getTime() + 60_000);
+    const endedAt = shiftBack(now, minutesAgo);
+    const lasted = endedAt.getTime() - open.startedAt.getTime();
+
+    if (lasted < 60_000) {
+      if (minutesAgo > 0) {
+        // «Проснулась 15 мин назад», а уснула 5 минут назад — так не бывает.
+        const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: window.timeZone });
+        throw new UserError(`Сон начался в ${time.format(open.startedAt)} — проснуться раньше не получится. Выберите «сейчас».`);
+      }
+      // Меньше минуты между «Уснула» и «Проснулась» — нажали случайно:
+      // такой сон не записываем, а отменяем.
+      await db.delete(sleeps).where(eq(sleeps.id, open.id));
+      revalidatePath('/');
+      revalidatePath('/day');
+      return;
     }
 
     await db

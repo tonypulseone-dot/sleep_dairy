@@ -346,7 +346,14 @@ function Editor({
       (placed !== null && placed.throughMorning));
   // Мама вносит ночь, которая закончилась сегодня утром, а день стоит «Сегодня»:
   // такой сон оказался бы в будущем. Подсказываем и переносим одним нажатием.
-  const lastNight = days && placed?.inFuture && draft.day === days.today ? shiftDay(days.today, -1) : null;
+  // Кнопку «это прошлая ночь» предлагаем только ночному сну, который во
+  // вчерашних сутках уже закончился; дневной сон «в будущем» — просто ошибка времени.
+  const yesterday = days ? shiftDay(days.today, -1) : null;
+  const inFuture = placed?.inFuture ?? false;
+  const lastNight =
+    days && yesterday && inFuture && night && draft.day === days.today && !placeSleep({ ...draft, day: yesterday }, window.dayBoundary)?.inFuture
+      ? yesterday
+      : null;
 
   const quick = days
     ? [
@@ -414,15 +421,24 @@ function Editor({
         </p>
       )}
 
-      {lastNight && (
+      {inFuture && (
         <div className={styles.warn} role="status">
-          <span>
-            {words.wokeUp} в {draft.end} — это время сегодня ещё не наступило. Если это прошлая ночь,
-            она относится к суткам {dayLabel(lastNight)}.
-          </span>
-          <button type="button" className={styles.warnButton} onClick={() => onChange({ ...draft, day: lastNight })}>
-            Да, это {nightLabel(lastNight)}
-          </button>
+          {lastNight ? (
+            <>
+              <span>
+                {words.wokeUp} в {draft.end} — это время сегодня ещё не наступило. Если это прошлая
+                ночь, она относится к суткам {dayLabel(lastNight)}.
+              </span>
+              <button type="button" className={styles.warnButton} onClick={() => onChange({ ...draft, day: lastNight })}>
+                Да, это {nightLabel(lastNight)}
+              </button>
+            </>
+          ) : (
+            <span>
+              {words.wokeUp} в {draft.end} — это время ещё не наступило. Проверьте время или
+              выберите другой день.
+            </span>
+          )}
         </div>
       )}
 
