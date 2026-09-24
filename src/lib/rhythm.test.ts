@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ageInMonths, ownWakeWindow, pickNorm, rhythmHint, typicalNapCount, type NormRow } from './rhythm';
+import { ageInMonths, ownNapLength, ownNightLength, ownWakeWindow, pickNorm, rhythmHint, typicalNapCount, type NormRow } from './rhythm';
 import type { DayTotals } from './sleep-day';
 
 const row = (from: number, to: number, naps: number | null, windows: [number, number][]): NormRow => ({
@@ -72,4 +72,15 @@ test('пока данных нет, берём её таблицу и показ
 test('на неизвестный возраст лучше пусто, чем выдуманная цифра', () => {
   assert.equal(rhythmHint([], [row(8, 8, 3, [[165, 180]])], 24), null);
   assert.equal(rhythmHint([], [], 6), null);
+});
+
+test('длина дневного сна — среднее по снам прошлых дней, от трёх снов', () => {
+  assert.equal(ownNapLength([day([80, 90], [])]), null);
+  assert.equal(ownNapLength([day([80, 90], []), day([100], [])]), 90);
+});
+
+test('длина ночи — среднее по ночам, где сон был, от двух ночей', () => {
+  const night = (minutes: number): DayTotals => ({ ...day([], []), nightSleep: minutes });
+  assert.equal(ownNightLength([night(600)]), null);
+  assert.equal(ownNightLength([night(600), night(0), night(660)]), 630);
 });

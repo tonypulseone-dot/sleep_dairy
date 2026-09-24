@@ -75,6 +75,23 @@ export function ownWakeWindow(days: DayTotals[]): number | null {
   return Math.round(windows.reduce((sum, value) => sum + value, 0) / windows.length);
 }
 
+/**
+ * Сколько обычно длится дневной сон — по дневным снам завершённых дней.
+ * Меньше трёх снов — не ориентир, а случайность, поэтому молчим.
+ */
+export function ownNapLength(pastDays: DayTotals[]): number | null {
+  const naps = pastDays.flatMap((day) => day.naps);
+  if (naps.length < 3) return null;
+  return Math.round(naps.reduce((sum, value) => sum + value, 0) / naps.length);
+}
+
+/** Сколько обычно длится ночной сон — нужно хотя бы две полные ночи. */
+export function ownNightLength(pastDays: DayTotals[]): number | null {
+  const nights = pastDays.map((day) => day.nightSleep).filter((minutes) => minutes > 0);
+  if (nights.length < 2) return null;
+  return Math.round(nights.reduce((sum, value) => sum + value, 0) / nights.length);
+}
+
 export type HintSource = 'own' | 'norm';
 
 export interface RhythmHint {

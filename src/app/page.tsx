@@ -9,7 +9,7 @@ import { SleepToggle } from '@/components/SleepToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
-import { ageInMonths, rhythmHint } from '@/lib/rhythm';
+import { ageInMonths, ownNapLength, ownNightLength, rhythmHint } from '@/lib/rhythm';
 import { resolveTheme } from '@/lib/theme';
 import {
   daySegments,
@@ -69,6 +69,7 @@ export default async function Home() {
     child.showRhythmHint ? db.select().from(rhythmNorms) : Promise.resolve([]),
   ]);
 
+  const open = openRows[0] ?? null;
   const todayRows = weekRows.filter((row) => row.sleepDay === today);
   const records = todayRows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt }));
   const totals = summarizeDay(today, records, window, now);
@@ -91,16 +92,31 @@ export default async function Home() {
     ? rhythmHint(weekDays, norms, ageInMonths(child.birthDate, child.dueDate, now))
     : null;
 
-  const hintText = hint
+  const wakeHintText = hint
     ? hint.source === 'own'
       ? `Обычно бодрствует около ${human(hint.min)}`
       : `В этом возрасте бодрствуют ${human(hint.min)} – ${human(hint.max)}. Это ориентир, а не мерка`
     : null;
 
+  // Пока малыш спит, маме важно, сколько обычно длится сон, а не бодрствование.
+  // Только по его собственным дням: сегодняшний не берём — он ещё идёт.
+  const pastDays = weekDays.slice(1);
+  const sleepLength = open && child.showRhythmHint
+    ? open.kind === 'night'
+      ? ownNightLength(pastDays)
+      : ownNapLength(pastDays)
+    : null;
+  const sleepHintText = sleepLength === null
+    ? null
+    : open?.kind === 'night'
+      ? `Ночью обычно спит около ${human(sleepLength)}`
+      : `Дневной сон обычно длится около ${human(sleepLength)}`;
+
+  const hintText = open ? sleepHintText : wakeHintText;
+
   const elapsedToday = Math.round((now.getTime() - dayStartInstant(today, window).getTime()) / 60000);
   const nowMinutes = elapsedToday >= 0 && elapsedToday <= 1440 ? elapsedToday : null;
 
-  const open = openRows[0] ?? null;
   const lastEnded = endedRows[0] ?? null;
 
   // Сон длиннее двадцати часов означает не рекорд, а забытую отметку.
