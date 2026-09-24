@@ -33,7 +33,7 @@ function human(minutes: number): string {
 
 export default async function Home() {
   const parent = await currentParent();
-  if (!parent) return <TelegramBoot />;
+  if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
 
   const child = await currentChild(parent.id);
   if (!child) redirect('/onboarding');

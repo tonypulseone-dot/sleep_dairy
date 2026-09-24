@@ -12,7 +12,7 @@ export default async function ConnectPage({
   searchParams: Promise<{ c?: string }>;
 }) {
   const parent = await currentParent();
-  if (!parent) return <TelegramBoot />;
+  if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
 
   // Анкету заполняем до согласия: консультанту нужен уже заведённый ребёнок.
   const child = await currentChild(parent.id);

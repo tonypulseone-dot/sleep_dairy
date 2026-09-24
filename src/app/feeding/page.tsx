@@ -9,7 +9,7 @@ import { sleepDayOf, type DayWindow } from '@/lib/sleep-day';
 
 export default async function FeedingPage() {
   const parent = await currentParent();
-  if (!parent) return <TelegramBoot />;
+  if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
 
   const child = await currentChild(parent.id);
   if (!child) redirect('/onboarding');

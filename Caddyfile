@@ -1,5 +1,17 @@
 {$APP_DOMAIN} {
 	encode zstd gzip
+
+	# Заголовки безопасности. Запрета на встраивание в чужие страницы
+	# (X-Frame-Options, frame-ancestors) здесь нет намеренно: веб-версия
+	# Telegram открывает мини-приложение именно во фрейме.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
 	reverse_proxy app:3000
 }
 

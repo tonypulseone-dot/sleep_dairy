@@ -22,7 +22,7 @@ export default async function DayPage({
   searchParams: Promise<{ d?: string }>;
 }) {
   const parent = await currentParent();
-  if (!parent) return <TelegramBoot />;
+  if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
 
   const child = await currentChild(parent.id);
   if (!child) redirect('/onboarding');
