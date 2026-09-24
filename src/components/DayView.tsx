@@ -199,9 +199,6 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
           >
             Добавить сон
           </button>
-          <Link href="/import" className={styles.addPhoto}>
-            Загрузить снимками
-          </Link>
         </div>
       )}
     </main>

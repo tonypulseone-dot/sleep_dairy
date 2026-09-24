@@ -268,7 +268,6 @@ mkdir -p /opt/caddy-sites
 
 PG_PASS=$(env_value POSTGRES_PASSWORD);  [ -n "$PG_PASS" ] || PG_PASS=$(openssl rand -hex 32)
 SESSION=$(env_value SESSION_SECRET);     [ -n "$SESSION" ] || SESSION=$(openssl rand -hex 32)
-ANTHROPIC=$(env_value ANTHROPIC_API_KEY)
 # Прямые ссылки t.me/бот/app работают, только если мини-приложение заведено
 # в BotFather через /newapp. Без бота это единственный способ пригласить маму.
 PROFILES=''
@@ -293,10 +292,6 @@ COMPOSE_PROFILES=$PROFILES
 
 POSTGRES_PASSWORD=$PG_PASS
 SESSION_SECRET=$SESSION
-
-# Распознавание скриншотов. С российского сервера Anthropic недоступен,
-# поэтому пусто: приложение честно скажет, что загрузка снимками не настроена.
-ANTHROPIC_API_KEY=$ANTHROPIC
 
 # Реквизиты для политики конфиденциальности — заполнить до живых мам.
 LEGAL_OPERATOR=$L_OPERATOR

@@ -37,7 +37,6 @@ services:
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_APP_SHORT_NAME: ${TELEGRAM_APP_SHORT_NAME:-}
       SESSION_SECRET: ${SESSION_SECRET:?задайте SESSION_SECRET}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       APP_URL: https://${APP_DOMAIN:?задайте APP_DOMAIN}
       # Реквизиты для политики конфиденциальности. Без них страница /privacy
       # открывается с предупреждением, что документ не заполнен.

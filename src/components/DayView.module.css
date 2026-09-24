@@ -110,7 +110,7 @@
 
 .editorActions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.save, .ghost, .danger, .add, .addPhoto {
+.save, .ghost, .danger, .add {
   min-height: var(--tap);
   padding: 0 18px;
   border-radius: var(--radius-sm);
@@ -127,12 +127,7 @@
 .add {
   flex: 1; background: var(--surface); border: 1px solid var(--line); color: var(--ink);
 }
-.addPhoto {
-  background: transparent; border: 1px dashed var(--line); color: var(--ink-2);
-  text-decoration: none; display: flex; align-items: center; justify-content: center;
-  white-space: nowrap;
-}
-.add:hover, .addPhoto:hover, .ghost:hover { border-color: var(--ink-3); }
+.add:hover, .ghost:hover { border-color: var(--ink-3); }
 
 .save:disabled, .ghost:disabled, .danger:disabled { opacity: .6; cursor: default; }
 
