@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
-import { IconBack, IconForward, IconMoon } from './Icons';
+import { IconBack, IconCalendar, IconForward, IconMoon } from './Icons';
 import { childWords, type ChildSex } from '@/lib/words';
 import { BackButton } from './BackButton';
 
@@ -381,12 +381,29 @@ function Editor({
                 {item.label}
               </button>
             ))}
+            {/*
+              Другой день. Видимая часть — обычная кнопка с нашей подписью;
+              системное поле даты лежит поверх неё прозрачным: нажатие
+              открывает календарь телефона, но рисует его не iOS, а мы —
+              иначе в Safari текст поля «съезжал» к верху подложки.
+            */}
             <label className={`${styles.dayChip} ${styles.dayDate} ${other ? styles.dayChipOn : ''}`}>
-              <span className="sr-only">Другой день</span>
+              <IconCalendar size={18} />
+              <span>{other ? dayLabel(draft.day) : 'Другой день'}</span>
               <input
                 type="date"
+                className={styles.dateOverlay}
                 value={draft.day}
                 max={days.today}
+                aria-label="Другой день"
+                onClick={(event) => {
+                  // На компьютере Chrome открывает календарь только по значку — открываем сами.
+                  try {
+                    event.currentTarget.showPicker?.();
+                  } catch {
+                    /* браузер без showPicker — откроется сам */
+                  }
+                }}
                 onChange={(event) => event.target.value && onChange({ ...draft, day: event.target.value })}
               />
             </label>

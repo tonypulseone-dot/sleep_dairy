@@ -69,6 +69,15 @@ export function IconBolt(props: IconProps) {
   return <Svg {...props}><path d="M13 3 5.5 13.5H12l-1 7.5 7.5-10.5H12z" /></Svg>;
 }
 
+export function IconCalendar(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+      <path d="M4 10h16M8.5 3.5v3.5M15.5 3.5v3.5" />
+    </Svg>
+  );
+}
+
 /** Кубики с картинками — «поиграть»: их узнаёт каждая мама. */
 export function IconBlocks(props: IconProps) {
   return (
