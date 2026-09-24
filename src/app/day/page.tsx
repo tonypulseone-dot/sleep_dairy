@@ -19,7 +19,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export default async function DayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ d?: string }>;
+  searchParams: Promise<{ d?: string; add?: string }>;
 }) {
   const parent = await currentParent();
   if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
@@ -35,7 +35,8 @@ export default async function DayPage({
 
   const now = new Date();
   const today = sleepDayOf(now, window);
-  const requested = (await searchParams).d;
+  const query = await searchParams;
+  const requested = query.d;
   const sleepDay = requested && DATE.test(requested) ? requested : today;
 
   const rows = await db
@@ -78,6 +79,10 @@ export default async function DayPage({
   return (
     <DayView
       sleepDay={sleepDay}
+      today={today}
+      dayBoundary={child.dayBoundaryMinutes}
+      nightFrom={child.nightFromMinutes}
+      startAdding={query.add === '1'}
       title={title}
       prevDay={shiftDate(sleepDay, -1)}
       nextDay={sleepDay < today ? shiftDate(sleepDay, 1) : null}

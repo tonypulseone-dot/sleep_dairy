@@ -74,9 +74,14 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .badge {
   width: 30px; height: 30px; flex: none; border-radius: 10px;
   display: grid; place-items: center; color: var(--surface);
+  --b: var(--accent);
+  background: var(--b);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--b) 30%, transparent),
+    0 3px 14px -3px color-mix(in srgb, var(--b) var(--glow), transparent);
 }
-.badgeLook { background: var(--energy-explore); }
-.badgeChild { background: var(--energy-active); }
-.badgeDay { background: var(--night); }
-.badgeAccess { background: var(--accent); }
-.badgeData { background: var(--ink-2); }
+.badgeLook { --b: var(--play); }
+.badgeChild { --b: var(--energy-active); }
+.badgeDay { --b: var(--night); }
+.badgeAccess { --b: var(--energy-explore); }
+.badgeData { --b: var(--ink-2); }

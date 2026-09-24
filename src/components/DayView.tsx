@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,12 @@ export interface DayTotalsView {
 
 interface Props {
   sleepDay: string;
+  /** Сегодняшние сонные сутки — для выбора «сегодня / вчера / позавчера». */
+  today: string;
+  dayBoundary: number;
+  nightFrom: number;
+  /** Пришли с главной по кнопке «Внести сон вручную» — форма сразу открыта. */
+  startAdding?: boolean;
   title: string;
   prevDay: string;
   nextDay: string | null;
@@ -63,23 +70,62 @@ function KindMark({ kind }: { kind: 'day' | 'night' }) {
 
 interface Draft {
   id: string | null;
+  /** Сонные сутки, к которым относится сон. */
+  day: string;
   start: string;
   end: string;
 }
 
-export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }: Props) {
+function shiftDay(date: string, days: number): string {
+  const at = new Date(`${date}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+
+function toMinutes(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+/** «1 ч 30 мин» — длительность между двумя «14:00», через полночь тоже. */
+function spanText(start: string, end: string): string | null {
+  const from = toMinutes(start);
+  const to = toMinutes(end);
+  if (from === null || to === null) return null;
+  const minutes = (to - from + 1440) % 1440 || 1440;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours === 0 ? `${rest} мин` : rest === 0 ? `${hours} ч` : `${hours} ч ${rest} мин`;
+}
+
+export function DayView({
+  sleepDay,
+  today,
+  dayBoundary,
+  nightFrom,
+  startAdding = false,
+  title,
+  prevDay,
+  nextDay,
+  rows,
+  totals,
+  sex,
+}: Props) {
   const words = childWords(sex);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const blank = (): Draft => ({ id: null, day: sleepDay, start: '13:00', end: '14:30' });
+  const [draft, setDraft] = useState<Draft | null>(startAdding ? blank : null);
   const [error, setError] = useState<string | null>(null);
 
-  const run = (job: () => Promise<void>) => {
+  const run = (job: () => Promise<void>, goTo?: string) => {
     setError(null);
     startTransition(async () => {
       try {
         await job();
         setDraft(null);
+        // Сон за другой день — показываем тот день, чтобы мама увидела запись.
+        if (goTo) router.replace(`/day?d=${goTo}`);
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
@@ -89,11 +135,14 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
 
   const save = () => {
     if (!draft) return;
-    run(async () => {
-      const input = { sleepDay, start: draft.start, end: draft.end };
-      if (draft.id) await updateSleep(draft.id, input);
-      else await addSleepManual(input);
-    });
+    run(
+      async () => {
+        const input = { sleepDay: draft.day, start: draft.start, end: draft.end };
+        if (draft.id) unwrap(await updateSleep(draft.id, input));
+        else unwrap(await addSleepManual(input));
+      },
+      draft.day !== sleepDay || startAdding ? draft.day : undefined,
+    );
   };
 
   return (
@@ -167,7 +216,7 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
                 setDraft(
                   draft?.id === row.id
                     ? null
-                    : { id: row.id, start: row.start, end: row.end ?? row.start },
+                    : { id: row.id, day: sleepDay, start: row.start, end: row.end ?? row.start },
                 )
               }
             >
@@ -185,12 +234,13 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
             {draft?.id === row.id && (
               <Editor
                 words={words}
+                window={{ dayBoundary, nightFrom }}
                 draft={draft}
                 pending={pending}
                 onChange={setDraft}
                 onSave={save}
                 onCancel={() => setDraft(null)}
-                onDelete={() => run(() => deleteSleep(row.id))}
+                onDelete={() => run(async () => unwrap(await deleteSleep(row.id)))}
               />
             )}
           </li>
@@ -201,7 +251,9 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
 
       {draft && draft.id === null ? (
         <Editor
-                words={words}
+          words={words}
+          window={{ dayBoundary, nightFrom }}
+          days={{ today }}
           draft={draft}
           pending={pending}
           onChange={setDraft}
@@ -213,9 +265,9 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
           <button
             type="button"
             className={styles.add}
-            onClick={() => setDraft({ id: null, start: '13:00', end: '14:30' })}
+            onClick={() => setDraft(blank())}
           >
-            Добавить сон
+            + Внести сон вручную
           </button>
         </div>
       )}
@@ -225,6 +277,8 @@ export function DayView({ sleepDay, title, prevDay, nextDay, rows, totals, sex }
 
 function Editor({
   words,
+  window,
+  days,
   draft,
   pending,
   onChange,
@@ -233,6 +287,9 @@ function Editor({
   onDelete,
 }: {
   words: ReturnType<typeof childWords>;
+  window: { dayBoundary: number; nightFrom: number };
+  /** Только для нового сна: выбор дня. У записанного сна день уже известен. */
+  days?: { today: string };
   draft: Draft;
   pending: boolean;
   onChange: (draft: Draft) => void;
@@ -240,8 +297,53 @@ function Editor({
   onCancel: () => void;
   onDelete?: () => void;
 }) {
+  const span = spanText(draft.start, draft.end);
+  const startMinutes = toMinutes(draft.start);
+  const night =
+    startMinutes !== null &&
+    (window.nightFrom > window.dayBoundary
+      ? startMinutes >= window.nightFrom || startMinutes < window.dayBoundary
+      : startMinutes >= window.nightFrom && startMinutes < window.dayBoundary);
+
+  const quick = days
+    ? [
+        { label: 'Сегодня', value: days.today },
+        { label: 'Вчера', value: shiftDay(days.today, -1) },
+        { label: 'Позавчера', value: shiftDay(days.today, -2) },
+      ]
+    : [];
+  const other = days && !quick.some((item) => item.value === draft.day);
+
   return (
     <div className={styles.editor}>
+      {days && (
+        <div className={styles.dayPick}>
+          <span className={styles.pickLabel}>Когда был сон</span>
+          <div className={styles.dayChips} role="group" aria-label="День">
+            {quick.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                aria-pressed={draft.day === item.value}
+                className={`${styles.dayChip} ${draft.day === item.value ? styles.dayChipOn : ''}`}
+                onClick={() => onChange({ ...draft, day: item.value })}
+              >
+                {item.label}
+              </button>
+            ))}
+            <label className={`${styles.dayChip} ${styles.dayDate} ${other ? styles.dayChipOn : ''}`}>
+              <span className="sr-only">Другой день</span>
+              <input
+                type="date"
+                value={draft.day}
+                max={days.today}
+                onChange={(event) => event.target.value && onChange({ ...draft, day: event.target.value })}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
       <div className={styles.times}>
         <label className={styles.timeField}>
           <span>{words.fellAsleep}</span>
@@ -260,6 +362,14 @@ function Editor({
           />
         </label>
       </div>
+
+      {span && (
+        <p className={styles.preview}>
+          <KindMark kind={night ? 'night' : 'day'} />
+          {night ? 'Ночной' : 'Дневной'} сон · <b>{span}</b>
+          {night && ` · если ${words.wokeUp.toLowerCase()} после полуночи, ночь всё равно запишется целиком`}
+        </p>
+      )}
 
       <div className={styles.editorActions}>
         <button type="button" className={styles.save} onClick={onSave} disabled={pending}>

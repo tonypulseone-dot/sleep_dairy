@@ -11,7 +11,7 @@ import styles from './SleepTimeline.module.css';
  * дневнике мамы и на графике выше. Консультант видит ритм формой: где
  * провалы, где сон съехал, какая ночь короткая, — не вчитываясь в цифры.
  * Цифры никуда не делись: итоги дня справа, окна бодрствования под шкалой,
- * точное время каждого сна — в подсказке и в выгрузке.
+ * точное время каждого сна — строкой под шкалой, в подсказке и в выгрузке.
  *
  * Пара цветов проверена валидатором (skill dataviz) на обоих фонах:
  * ΔE при дальтонизме 24–27, контраст к фону не ниже 3:1.
@@ -54,7 +54,15 @@ export interface TimelineDay {
 const LABEL_MIN_MINUTES = 70;
 const LABEL_ALWAYS_MINUTES = 150;
 
-export function SleepTimeline({ days, dayBoundary }: { days: TimelineDay[]; dayBoundary: number }) {
+export function SleepTimeline({
+  days,
+  dayBoundary,
+  hint,
+}: {
+  days: TimelineDay[];
+  dayBoundary: number;
+  hint?: string;
+}) {
   const [tip, setTip] = useState<{ day: string; index: number } | null>(null);
 
   // Часы оси: каждые три часа от утренней границы, как их читает консультант.
@@ -66,7 +74,10 @@ export function SleepTimeline({ days, dayBoundary }: { days: TimelineDay[]; dayB
   return (
     <section className={styles.card} aria-label="Сны по дням">
       <header className={styles.head}>
-        <h2 className={styles.title}>Сны по дням</h2>
+        <div className={styles.titleBox}>
+          <h2 className={styles.title}>Сны по дням</h2>
+          {hint && <p className={styles.hint}>{hint}</p>}
+        </div>
         <div className={styles.legend}>
           <span className={styles.key}>
             <i className={`${styles.swatch} ${styles.night}`} aria-hidden="true" /> ночной сон
@@ -162,10 +173,29 @@ export function SleepTimeline({ days, dayBoundary }: { days: TimelineDay[]; dayB
                 {day.segments.length === 0 && <span className={styles.none}>записей нет</span>}
               </div>
 
-              {day.wakeWindows.length > 0 && (
-                <p className={styles.windows}>
-                  <span className={styles.windowsLabel}>бодрствования</span> {day.wakeWindows.join(' · ')}
-                </p>
+              {/* Точное время каждого сна — сразу, без наведения: консультант
+                  читает его со скриншота и с телефона, где наводить нечем.
+                  Между снами — бодрствование, в том же порядке, что на шкале. */}
+              {day.segments.length > 0 && (
+                <ol className={styles.log} aria-label="Сны и бодрствования по порядку">
+                  {day.segments.map((segment, index) => (
+                    <li key={index} className={styles.logItem}>
+                      {index > 0 && day.wakeWindows[index - 1] && (
+                        <span className={styles.logWake} title="бодрствование">
+                          <span aria-hidden="true">↔</span> {day.wakeWindows[index - 1]}
+                        </span>
+                      )}
+                      <span className={`${styles.logSleep} ${styles[`log_${segment.kind}`]}`}>
+                        <i className={`${styles.logDot} ${styles[segment.kind]}`} aria-hidden="true" />
+                        <span className="sr-only">{segment.kind === 'night' ? 'ночной сон' : 'дневной сон'} </span>
+                        <b>
+                          {segment.start}–{segment.end ?? 'идёт'}
+                        </b>
+                        <span className={styles.logDur}>{segment.duration}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               )}
             </div>
 

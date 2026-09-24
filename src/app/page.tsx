@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconBottle, IconSettings, IconSparkle } from '@/components/Icons';
+import { IconBottle, IconSettings, IconToy } from '@/components/Icons';
 import { SexPrompt } from '@/components/SexPrompt';
 import { defaultConsultant } from '@/lib/default-consultant';
 import { SleepToggle } from '@/components/SleepToggle';
@@ -200,6 +200,15 @@ export default async function Home() {
         />
       </div>
 
+      {/* Забыла нажать вовремя или вносит вчерашний день — отдельная заметная кнопка. */}
+      <Link href="/day?add=1" className={styles.manual}>
+        <span className={styles.manualPlus} aria-hidden="true">+</span>
+        <span className={styles.manualText}>
+          <span className={styles.manualTitle}>Внести сон вручную</span>
+          <span className={styles.manualSub}>забыли отметить — сегодня, вчера или раньше</span>
+        </span>
+      </Link>
+
       <Link href="/day" className={styles.totals} aria-label="Открыть дневник за сегодня">
         {todayRows.length > 0 ? (
           <>
@@ -252,7 +261,7 @@ export default async function Home() {
         )}
         <Link href="/activities" className={`${styles.tile} ${styles.tileActivities}`}>
           <span className={styles.tileIcon} aria-hidden="true">
-            <IconSparkle />
+            <IconToy />
           </span>
           <span className={styles.tileText}>
             <span className={styles.tileTitle}>Чем заняться</span>

@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { setChildSex } from '@/app/actions';
@@ -16,7 +17,7 @@ export function SexPrompt({ name }: { name: string }) {
 
   const choose = (sex: ChildSex) =>
     startTransition(async () => {
-      await setChildSex(sex);
+      unwrap(await setChildSex(sex));
       router.refresh();
     });
 

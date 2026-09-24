@@ -26,13 +26,13 @@
 .sleep {
   background: var(--accent);
   color: var(--accent-ink);
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--shadow-lift), 0 0 44px -8px color-mix(in srgb, var(--accent) var(--glow), transparent);
 }
 
 .wake {
   background: var(--wake);
   color: var(--wake-ink);
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--shadow-lift), 0 0 44px -8px color-mix(in srgb, var(--wake) var(--glow), transparent);
 }
 
 /*
@@ -44,14 +44,19 @@
   background: var(--night-soft);
   color: var(--night-ink);
   border: 2px solid var(--night);
-  box-shadow: none;
+  /* Неоновое кольцо: ореол наружу и чуть внутрь — видно, но не слепит. */
+  box-shadow:
+    0 0 26px -6px color-mix(in srgb, var(--night) var(--glow), transparent),
+    inset 0 0 18px -8px color-mix(in srgb, var(--night) var(--glow), transparent);
 }
 
 :global(:root[data-theme='dark']) .wake {
   background: var(--day-soft);
   color: var(--day-ink);
   border: 2px solid var(--day);
-  box-shadow: none;
+  box-shadow:
+    0 0 26px -6px color-mix(in srgb, var(--day) var(--glow), transparent),
+    inset 0 0 18px -8px color-mix(in srgb, var(--day) var(--glow), transparent);
 }
 
 .status { text-align: center; min-height: 48px; display: flex; flex-direction: column; gap: 3px; }

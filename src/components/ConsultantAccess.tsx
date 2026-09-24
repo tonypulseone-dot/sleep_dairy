@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -25,7 +26,7 @@ export function ConnectPrompt({ slug, consultantName }: { slug: string; consulta
     setError(null);
     startTransition(async () => {
       try {
-        await grantAccess(slug);
+        unwrap(await grantAccess(slug));
         router.replace('/consultant');
         router.refresh();
       } catch (cause) {
@@ -66,7 +67,7 @@ export function ConsultantList({ grants }: { grants: GrantView[] }) {
     setError(null);
     startTransition(async () => {
       try {
-        await revokeAccess(id);
+        unwrap(await revokeAccess(id));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось закрыть доступ');

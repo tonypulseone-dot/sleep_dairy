@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import Script from 'next/script';
 import { currentChild, currentParent } from '@/lib/session';
 import { DEFAULT_DAY_BOUNDARY, DEFAULT_NIGHT_FROM } from '@/lib/sleep-day';
@@ -22,16 +23,19 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Кабинет консультанта всегда светлый и без ночного приглушения (см. proxy.ts).
+  const pro = (await headers()).get('x-sd-area') === 'pro';
+
   // Тему решаем на сервере, чтобы ночью не мигнуть белым экраном перед отрисовкой.
-  const parent = await currentParent();
+  const parent = pro ? null : await currentParent();
   const child = parent ? await currentChild(parent.id) : null;
   const dayWindow = {
     dayBoundary: child?.dayBoundaryMinutes ?? DEFAULT_DAY_BOUNDARY,
     nightFrom: child?.nightFromMinutes ?? DEFAULT_NIGHT_FROM,
     timeZone: parent?.timeZone ?? 'Europe/Moscow',
   };
-  const theme = resolveTheme(parent?.themePref ?? 'auto', dayWindow);
-  const hush = isDeepNight(dayWindow);
+  const theme = pro ? 'light' : resolveTheme(parent?.themePref ?? 'auto', dayWindow);
+  const hush = !pro && isDeepNight(dayWindow);
 
   return (
     <html lang="ru" data-theme={theme} data-hush={hush ? '' : undefined} suppressHydrationWarning>
@@ -45,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <TelegramChrome theme={theme} />
-        <NightHush dayBoundary={dayWindow.dayBoundary} timeZone={dayWindow.timeZone} />
+        {!pro && <NightHush dayBoundary={dayWindow.dayBoundary} timeZone={dayWindow.timeZone} />}
         {children}
       </body>
     </html>

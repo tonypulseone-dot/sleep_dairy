@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconBolt, IconMoon, IconSparkle } from './Icons';
+import { IconBlocks, IconBolt, IconMoon } from './Icons';
 import styles from './ActivityList.module.css';
 
 export type Energy = 'active' | 'explore' | 'calm';
@@ -21,7 +21,7 @@ export interface ActivityView {
  */
 export const ENERGY: Record<Energy, { label: string; when: string; Icon: typeof IconBolt }> = {
   active: { label: 'Подвигаться', when: 'в начале', Icon: IconBolt },
-  explore: { label: 'Поиграть', when: 'в середине', Icon: IconSparkle },
+  explore: { label: 'Поиграть', when: 'в середине', Icon: IconBlocks },
   calm: { label: 'Спокойно', when: 'перед сном', Icon: IconMoon },
 };
 

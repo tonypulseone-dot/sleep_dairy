@@ -8,6 +8,7 @@ import { ageInMonths } from '@/lib/rhythm';
 import styles from './activities.module.css';
 import { BackButton } from '@/components/BackButton';
 import { ActivityList } from '@/components/ActivityList';
+import { IconToy } from '@/components/Icons';
 
 /**
  * Чем занять в бодрствование.
@@ -43,6 +44,9 @@ export default async function ActivitiesPage() {
     <main className={styles.screen}>
       <header className={styles.head}>
         <BackButton href="/" className={styles.back} label="Назад" />
+        <span className={styles.mark} aria-hidden="true">
+          <IconToy size={20} />
+        </span>
         <h1>Чем заняться</h1>
         <span className={styles.age}>{months} мес</span>
       </header>

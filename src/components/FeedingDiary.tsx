@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addFeeding, deleteFeeding } from '@/app/actions';
@@ -78,7 +79,7 @@ export function FeedingDiary({
         className={styles.add}
         disabled={pending}
         onClick={() => run(async () => {
-          await addFeeding(amount);
+          unwrap(await addFeeding(amount));
           setAmount(null);
         })}
       >
@@ -105,7 +106,7 @@ export function FeedingDiary({
               className={styles.remove}
               aria-label={`Убрать кормление в ${row.time}`}
               disabled={pending}
-              onClick={() => run(() => deleteFeeding(row.id))}
+              onClick={() => run(async () => unwrap(await deleteFeeding(row.id)))}
             >
               <IconClose size={18} />
             </button>

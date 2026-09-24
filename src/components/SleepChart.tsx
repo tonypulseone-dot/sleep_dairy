@@ -33,7 +33,7 @@ function hm(minutes: number): string {
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
-export function SleepChart({ days }: { days: ChartDay[] }) {
+export function SleepChart({ days, hint }: { days: ChartDay[]; hint?: string }) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const plotWidth = WIDTH - PAD.left - PAD.right;
@@ -53,7 +53,10 @@ export function SleepChart({ days }: { days: ChartDay[] }) {
   return (
     <figure className={styles.figure}>
       <figcaption className={styles.caption}>
-        <span className={styles.title}>Суточный сон по дням</span>
+        <span className={styles.titleBox}>
+          <span className={styles.title}>Суточный сон по дням</span>
+          {hint && <span className={styles.hint}>{hint}</span>}
+        </span>
         <span className={styles.legend}>
           <span className={styles.key}>
             <i className={styles.swatchNight} aria-hidden="true" /> ночной

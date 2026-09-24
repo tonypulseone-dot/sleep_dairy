@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { proLogin } from '@/app/pro/actions';
@@ -17,7 +18,7 @@ export function ProLogin() {
     setError(null);
     startTransition(async () => {
       try {
-        await proLogin(email, password);
+        unwrap(await proLogin(email, password));
         router.replace('/pro');
         router.refresh();
       } catch (cause) {

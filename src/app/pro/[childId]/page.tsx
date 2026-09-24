@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { and, asc, eq, gte, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { accessGrants, children, parents, sleeps } from '@/db/schema';
+import { accessGrants, children, consultantNotes, parents, sleeps } from '@/db/schema';
 import { SleepChart, type ChartDay } from '@/components/SleepChart';
 import { SleepTimeline, type TimelineDay } from '@/components/SleepTimeline';
+import { ProNotes } from '@/components/ProNotes';
+import { ageLabel, clockOf } from '@/lib/pro-format';
 import { currentConsultant } from '@/lib/pro-session';
 import {
   averageTotalSleep,
@@ -39,7 +41,7 @@ export default async function ClientCard({
   // Доступ действует, пока мама его не отозвала: проверяем на каждый заход,
   // а не один раз при входе в кабинет.
   const [access] = await db
-    .select({ id: accessGrants.id })
+    .select({ id: accessGrants.id, grantedAt: accessGrants.grantedAt })
     .from(accessGrants)
     .where(
       and(
@@ -54,6 +56,12 @@ export default async function ClientCard({
   const [child] = await db.select().from(children).where(eq(children.id, childId)).limit(1);
   if (!child) notFound();
   const [parent] = await db.select().from(parents).where(eq(parents.id, child.parentId)).limit(1);
+
+  const notes = await db
+    .select()
+    .from(consultantNotes)
+    .where(and(eq(consultantNotes.childId, childId), eq(consultantNotes.consultantId, consultant.id)))
+    .orderBy(desc(consultantNotes.createdAt));
 
   const window: DayWindow = {
     dayBoundary: child.dayBoundaryMinutes,
@@ -141,42 +149,101 @@ export default async function ClientCard({
     nightSleep: day.nightSleep,
   }));
 
+  const noteTime = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Moscow',
+  });
+  const since = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
+  const birth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const words = childWords(child.sex);
+  // «10 мая 2026 г.» — точку в конце убираем, дальше идёт своя.
+  const bornOn = birth.format(new Date(`${child.birthDate}T12:00:00Z`)).replace(/\.$/, '');
+
+  // Каждое поле — с пояснением: что это и зачем консультанту.
+  const profile: { label: string; value: React.ReactNode; hint: string }[] = [
+    {
+      label: 'Возраст',
+      value: ageLabel(child.birthDate, child.dueDate, now),
+      hint: child.dueDate
+        ? `${words.born} ${bornOn}. Скорректированный — от предполагаемой даты родов: по нему подбираем режим недоношенным.`
+        : `${words.born} ${bornOn}. По возрасту сверяем нормы сна и окна бодрствования.`,
+    },
+    {
+      label: 'Срок рождения',
+      value: child.isPreterm ? words.preterm : words.fullTerm,
+      hint: child.isPreterm
+        ? 'Недоношенным режим ориентируем на скорректированный возраст, а не на фактический.'
+        : `${words.born} в срок — режим сверяем с фактическим возрастом.`,
+    },
+    {
+      label: 'Вскармливание',
+      value: child.feedingType === 'formula' ? 'искусственное' : child.feedingType === 'mixed' ? 'смешанное' : 'грудное',
+      hint: 'Влияет на ночные пробуждения, кормления перед сном и ассоциации на засыпание.',
+    },
+    {
+      label: 'Темперамент',
+      value:
+        child.temperament && child.temperament.length > 0 ? (
+          <span className={styles.tags}>
+            {child.temperament.map((item) => (
+              <span key={item} className={styles.tag}>
+                {item}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className={styles.muted}>мама не отметила</span>
+        ),
+      hint: 'Мама выбирает при регистрации. Подсказывает, насколько малыш чувствителен к укладыванию, шуму и смене обстановки.',
+    },
+    {
+      label: 'Особенности здоровья',
+      value: child.healthNotes ? (
+        <span className={styles.health}>{child.healthNotes}</span>
+      ) : (
+        <span className={styles.muted}>мама ничего не указала</span>
+      ),
+      hint: 'Со слов мамы: анемия, рефлюкс, аллергия и т. п. — меняют тактику работы со сном.',
+    },
+    {
+      label: 'Границы суток',
+      value: `день с ${clockOf(child.dayBoundaryMinutes)}, ночь с ${clockOf(child.nightFromMinutes)}`,
+      hint: 'Как настроено у мамы: по этим часам сон делится на дневной и ночной, а записи — на сутки.',
+    },
+    {
+      label: 'Мама',
+      value: `${parent.firstName ?? 'без имени'} · открыла доступ ${since.format(access.grantedAt)}`,
+      hint: 'Доступ действует, пока мама его не закроет в приложении — тогда карточка исчезнет из кабинета.',
+    },
+  ];
+
   return (
     <main className={styles.screen}>
       <div className={styles.top}>
-        <div className={styles.card}>
-          <span className={styles.cardName}>{child.name}</span>
-          <span className={styles.cardMeta}>
-            {child.isPreterm ? childWords(child.sex).preterm : childWords(child.sex).fullTerm}
-            {child.feedingType === 'formula'
-              ? ' · искусственное вскармливание'
-              : child.feedingType === 'mixed'
-                ? ' · смешанное вскармливание'
-                : ' · грудное вскармливание'}
-          </span>
-        </div>
+        <h1 className={styles.cardName}>{child.name}</h1>
         <Link href="/pro" className={styles.linkish}>
           Ко всем клиенткам
         </Link>
       </div>
 
-      {(child.temperament?.length || child.healthNotes) && (
-        <div>
-          {child.temperament && child.temperament.length > 0 && (
-            <div className={styles.tags}>
-              {child.temperament.map((item) => (
-                <span key={item} className={styles.tag}>
-                  {item}
-                </span>
-              ))}
+      <section className={styles.profile} aria-label="О малыше">
+        <dl className={styles.fields}>
+          {profile.map((field) => (
+            <div key={field.label} className={styles.field2}>
+              <dt className={styles.fieldLabel}>{field.label}</dt>
+              <dd className={styles.fieldValue}>{field.value}</dd>
+              <dd className={styles.fieldHint}>{field.hint}</dd>
             </div>
-          )}
-          {child.healthNotes && <div className={styles.health}>{child.healthNotes}</div>}
-        </div>
-      )}
+          ))}
+        </dl>
+      </section>
+
+      <ProNotes
+        childId={childId}
+        notes={notes.map((note) => ({ id: note.id, body: note.body, when: noteTime.format(note.createdAt) }))}
+      />
 
       <div className={styles.periods}>
-        <span className={styles.periodLabel}>Период</span>
+        <span className={styles.periodLabel}>Показать за</span>
         {PERIODS.map((value) => (
           <Link
             key={value}
@@ -192,9 +259,16 @@ export default async function ClientCard({
         </a>
       </div>
 
-      <SleepChart days={chartDays} />
+      <SleepChart
+        days={chartDays}
+        hint="Столбец — весь сон за сутки: ночной снизу, дневной сверху. Видно, растёт ли сон и не проседают ли отдельные дни."
+      />
 
-      <SleepTimeline days={timeline} dayBoundary={child.dayBoundaryMinutes} />
+      <SleepTimeline
+        days={timeline}
+        dayBoundary={child.dayBoundaryMinutes}
+        hint="Каждая строка — сутки от утренней границы. Под шкалой — время каждого сна и бодрствования (↔) между ними, справа — итоги и отклонение от среднего (▲▼)."
+      />
 
       <div className={styles.average}>
         <span className={styles.averageLabel}>Средне-суточный сон</span>

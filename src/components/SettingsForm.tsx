@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -68,7 +69,7 @@ export function SettingsForm(props: Props) {
     setSex(value);
     startTransition(async () => {
       try {
-        await setChildSex(value);
+        unwrap(await setChildSex(value));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
@@ -85,7 +86,7 @@ export function SettingsForm(props: Props) {
     setSaved(false);
     startTransition(async () => {
       try {
-        await updateDayWindow({ dayBoundary, nightFrom, timeZone });
+        unwrap(await updateDayWindow({ dayBoundary, nightFrom, timeZone }));
         setSaved(true);
         router.refresh();
       } catch (cause) {
@@ -111,7 +112,7 @@ export function SettingsForm(props: Props) {
     }
     startTransition(async () => {
       try {
-        await setThemePref(pref);
+        unwrap(await setThemePref(pref));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сменить тему');
@@ -123,7 +124,7 @@ export function SettingsForm(props: Props) {
     setRemoveError(null);
     startRemoving(async () => {
       try {
-        await deleteEverything();
+        unwrap(await deleteEverything());
         // Не на главную: там приложение завело бы маму заново, и вышло бы,
         // будто удаление не сработало.
         router.replace('/deleted');

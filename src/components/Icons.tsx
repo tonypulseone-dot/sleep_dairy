@@ -64,16 +64,34 @@ export function IconMoon(props: IconProps) {
   return <Svg {...props}><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" /></Svg>;
 }
 
-/** Энергия занятий: подвигаться — молния, поиграть — искра, спокойно — луна. */
+/** Энергия занятий: подвигаться — молния, поиграть — кубики, спокойно — луна. */
 export function IconBolt(props: IconProps) {
   return <Svg {...props}><path d="M13 3 5.5 13.5H12l-1 7.5 7.5-10.5H12z" /></Svg>;
 }
 
-export function IconSparkle(props: IconProps) {
+/** Кубики с картинками — «поиграть»: их узнаёт каждая мама. */
+export function IconBlocks(props: IconProps) {
   return (
     <Svg {...props}>
-      <path d="M12 4v4M12 16v4M4 12h4M16 12h4" />
-      <path d="M12 8.5c.6 2 1.5 2.9 3.5 3.5-2 .6-2.9 1.5-3.5 3.5-.6-2-1.5-2.9-3.5-3.5 2-.6 2.9-1.5 3.5-3.5z" />
+      <rect x="3.5" y="12.5" width="8" height="8" rx="1.6" />
+      <rect x="12.5" y="12.5" width="8" height="8" rx="1.6" />
+      <rect x="8" y="3.5" width="8" height="8" rx="1.6" />
+      <circle cx="7.5" cy="16.5" r="1.6" />
+      <path d="m14.6 18.4 1.9-3.4 1.9 3.4z" />
+      <path d="M10.6 7.5h2.8M12 6.1v2.8" />
+    </Svg>
+  );
+}
+
+/** Мишка — раздел «Чем заняться»: игры и игрушки, а не абстрактная искра. */
+export function IconToy(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6.06 9.5a2.9 2.9 0 1 1 3.03-2.67M14.91 6.83a2.9 2.9 0 1 1 3.03 2.67" />
+      <circle cx="12" cy="13.2" r="7" />
+      <ellipse cx="12" cy="16" rx="2.9" ry="2.2" />
+      <path d="M11.2 15.3h1.6" strokeWidth={2.2} />
+      <path d="M9.3 11.6h.01M14.7 11.6h.01" strokeWidth={2.6} />
     </Svg>
   );
 }

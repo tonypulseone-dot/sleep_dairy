@@ -1,0 +1,129 @@
+/*
+ * Дашборд кабинета. Цифры крупно, под каждой — что она значит: Виктория
+ * смотрит его с телефона между консультациями, без расшифровок в голове.
+ * Цвет только у смысла (хорошо / пора написать), и всегда рядом со словом.
+ */
+
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 820px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.kpi {
+  --k: var(--ink-3);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 14px 16px 14px 18px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+}
+.kpi::before {
+  content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px;
+  border-radius: 0 4px 4px 0; background: var(--k);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--k) var(--glow), transparent);
+}
+.kpiGood { --k: var(--energy-active); }
+.kpiWarn { --k: var(--energy-explore); background: var(--energy-explore-soft); border-color: transparent; }
+.kpiLabel { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.kpiValue {
+  font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1.1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.kpiHint { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
+
+.metrics { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 720px) { .metrics { grid-template-columns: 1.4fr 1fr 1fr; } }
+.metric {
+  display: flex; flex-direction: column; gap: 3px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.metricLabel { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.metricValue {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: baseline;
+  font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.metricHint { font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+
+.up { color: var(--energy-active-ink); }
+.down { color: var(--danger); }
+.flat { color: var(--ink-2); }
+
+.panel {
+  margin: 0; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;
+}
+
+/* --- кому напомнить --- */
+.remindList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.remind {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  padding: 10px 12px; border-radius: 14px; background: var(--energy-explore-soft);
+}
+.remindWho { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-height: 44px; color: var(--ink); text-decoration: none; min-width: 0; }
+.remindWho b { font-size: 15.5px; }
+.remindWho span { font-size: 13px; color: var(--energy-explore-ink); }
+.remindCopy {
+  min-height: 44px; padding: 0 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  font-size: 14px; font-weight: 500;
+}
+
+/* --- список клиенток --- */
+.clientsBlock { display: flex; flex-direction: column; gap: 10px; }
+.clientHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.status {
+  --s: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
+}
+.status::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--s);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--s) 70%, transparent);
+}
+.stActive { --s: var(--energy-active); }
+.stSlowing { --s: var(--day); }
+.stQuiet { --s: var(--energy-explore); color: var(--energy-explore-ink); }
+.stNew { --s: var(--accent); }
+.clientStats {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px;
+  font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.clientStats b { color: var(--ink); font-weight: 600; }
+.clientNote {
+  margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+  background: var(--surface-2); border-left: 3px solid var(--accent);
+  font-size: 13px; line-height: 1.4; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* --- графики --- */
+.charts { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 820px) { .charts { grid-template-columns: 1.6fr 1fr; } }
+.chartHead { display: flex; flex-direction: column; gap: 2px; }
+.chartHint { font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+
+.bars {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px;
+  height: 150px;
+}
+.barCol { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.barValue { font-size: 11.5px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.barTrack { flex: 1; width: 100%; max-width: 26px; display: flex; align-items: flex-end; }
+.bar {
+  display: block; width: 100%; min-height: 2px; border-radius: 5px 5px 2px 2px;
+  background: var(--accent); opacity: .78;
+}
+.barToday { opacity: 1; box-shadow: 0 0 12px color-mix(in srgb, var(--accent) var(--glow), transparent); }
+.barLabel {
+  display: flex; flex-direction: column; align-items: center; line-height: 1.15;
+  font-size: 10.5px; color: var(--ink-3);
+}
+.barLabel small { font-size: 10.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.ages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ageRow { display: grid; grid-template-columns: 70px 1fr 24px; align-items: center; gap: 10px; }
+.ageLabel { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.ageTrack { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.ageBar { display: block; height: 100%; border-radius: 6px; background: var(--play); min-width: 0; }
+.ageValue { font-size: 13px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }

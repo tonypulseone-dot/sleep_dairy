@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -71,7 +72,7 @@ export function Onboarding({ consultantName }: { consultantName: string | null }
     }
     startTransition(async () => {
       try {
-        await createChild({ name, sex, consent, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType });
+        unwrap(await createChild({ name, sex, consent, birthDate, dueDate, isPreterm, healthNotes, temperament, feedingType }));
         router.replace('/');
         router.refresh();
       } catch (cause) {

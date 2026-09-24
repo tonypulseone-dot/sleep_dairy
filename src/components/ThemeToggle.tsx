@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useOptimistic, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { setThemePref } from '@/app/actions';
@@ -34,7 +35,7 @@ export function ThemeToggle({ theme, className }: { theme: Theme; className?: st
         applyTheme(next);
         startTransition(async () => {
           setCurrent(next);
-          await setThemePref(next);
+          unwrap(await setThemePref(next));
           router.refresh();
         });
       }}

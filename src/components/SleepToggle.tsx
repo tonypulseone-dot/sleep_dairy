@@ -1,5 +1,6 @@
 'use client';
 
+import { unwrap } from '@/lib/action-result';
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { startSleep, stopSleep } from '@/app/actions';
@@ -71,8 +72,8 @@ export function SleepToggle({
     haptic('tap');
     startTransition(async () => {
       try {
-        if (isSleeping) await stopSleep(offset);
-        else await startSleep(offset);
+        if (isSleeping) unwrap(await stopSleep(offset));
+        else unwrap(await startSleep(offset));
         haptic('success');
       } catch (error) {
         haptic('error');
