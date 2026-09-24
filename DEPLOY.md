@@ -151,9 +151,13 @@ docker compose exec app node runtime/seed-consultant.cjs \
 ```bash
 git pull
 docker compose up -d --build
+./scripts/caddy-reload.sh
 ```
 
-Миграции накатятся сами, данные останутся на месте.
+Миграции накатятся сами, данные останутся на месте. Третья строка
+нужна, только если менялся `Caddyfile`: он подключён файлом, и без
+перезагрузки Caddy работает со старым. Если обновление меняло список
+занятий, перезалейте его: `docker compose exec app node runtime/seed-activities.cjs`.
 
 ## Если что-то не так
 
