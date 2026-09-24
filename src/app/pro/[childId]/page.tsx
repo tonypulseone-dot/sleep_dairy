@@ -4,10 +4,15 @@ import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, children, parents, sleeps } from '@/db/schema';
 import { SleepChart, type ChartDay } from '@/components/SleepChart';
+import { SleepTimeline, type TimelineDay } from '@/components/SleepTimeline';
 import { currentConsultant } from '@/lib/pro-session';
 import {
   averageTotalSleep,
+  dayStartInstant,
+  durationMinutes,
   formatDuration,
+  formatTimeOfDay,
+  localMinutes,
   shiftDate,
   sleepDayOf,
   summarizeDay,
@@ -86,11 +91,44 @@ export default async function ClientCard({
   const completed = days.filter((day) => day.sleepDay !== today && day.totalSleep > 0);
   const average = averageTotalSleep(completed);
 
-  const dayLabel = new Intl.DateTimeFormat('ru-RU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
+  // Шкала по дням: сны отрезками от утренней границы, свежий день сверху.
+  const byDayRows = new Map<string, typeof rows>();
+  for (const row of rows) byDayRows.set(row.sleepDay, [...(byDayRows.get(row.sleepDay) ?? []), row]);
+  const clock = (at: Date) => formatTimeOfDay(localMinutes(at, window.timeZone));
+  const timelineLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const timeline: TimelineDay[] = days.map((day) => {
+    const start = dayStartInstant(day.sleepDay, window).getTime();
+    const minutesFrom = (at: Date) => (at.getTime() - start) / 60000;
+    const segments = (byDayRows.get(day.sleepDay) ?? []).map((row) => {
+      const end = row.endedAt ?? now;
+      const from = Math.max(0, Math.min(1440, minutesFrom(row.startedAt)));
+      return {
+        from,
+        to: Math.max(from, Math.min(1440, minutesFrom(end))),
+        kind: row.kind,
+        ongoing: row.endedAt === null,
+        start: clock(row.startedAt),
+        end: row.endedAt ? clock(row.endedAt) : null,
+        duration: formatDuration(durationMinutes(row.startedAt, end)),
+      };
+    });
+    const complete = day.sleepDay !== today && day.totalSleep > 0;
+    const diff = average === null || !complete ? 0 : day.totalSleep - average;
+    const nowAt = day.sleepDay === today ? Math.round(minutesFrom(now)) : null;
+    return {
+      sleepDay: day.sleepDay,
+      label: timelineLabel.format(new Date(`${day.sleepDay}T12:00:00Z`)),
+      isToday: day.sleepDay === today,
+      segments,
+      wakeWindows: day.wakeWindows.map(formatDuration),
+      total: formatDuration(day.totalSleep),
+      day: formatDuration(day.daySleep),
+      night: formatDuration(day.nightSleep),
+      napCount: day.napCount,
+      // Отклонение от среднего — только заметное: мелочь в полчаса глаз не должна цеплять.
+      delta: Math.abs(diff) >= 30 ? { text: `${diff > 0 ? '+' : '−'}${formatDuration(Math.abs(diff))}`, up: diff > 0 } : null,
+      nowAt: nowAt !== null && nowAt >= 0 && nowAt <= 1440 ? nowAt : null,
+    };
   });
 
   // График читается слева направо от старых дней к свежим, как и любая динамика.
@@ -148,46 +186,15 @@ export default async function ClientCard({
             {value} дней
           </Link>
         ))}
+        {/* Та же выборка таблицей — для Excel и переписки с мамой. */}
+        <a href={`/pro/${childId}/export?days=${period}`} className={styles.download} download>
+          Скачать таблицу
+        </a>
       </div>
 
       <SleepChart days={chartDays} />
 
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>День</th>
-              <th>Дневные сны</th>
-              <th>Бодрствования</th>
-              <th>Дневной</th>
-              <th>Ночной</th>
-              <th>Бодрствование</th>
-              <th>Суточный</th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((day) => (
-              <tr key={day.sleepDay}>
-                <td className={styles.dateCell}>
-                  {dayLabel.format(new Date(`${day.sleepDay}T12:00:00Z`))}
-                </td>
-                <td className={styles.napList}>
-                  {day.naps.length > 0
-                    ? day.naps.map(formatDuration).join(' · ')
-                    : <span className={styles.muted}>—</span>}
-                </td>
-                <td className={styles.muted}>
-                  {day.wakeWindows.length > 0 ? day.wakeWindows.map(formatDuration).join(' · ') : '—'}
-                </td>
-                <td className={styles.dayCell}>{formatDuration(day.daySleep)}</td>
-                <td className={styles.nightCell}>{formatDuration(day.nightSleep)}</td>
-                <td>{formatDuration(day.totalWake)}</td>
-                <td className={styles.totalCell}>{formatDuration(day.totalSleep)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SleepTimeline days={timeline} dayBoundary={child.dayBoundaryMinutes} />
 
       <div className={styles.average}>
         <span className={styles.averageLabel}>Средне-суточный сон</span>

@@ -25,15 +25,16 @@
 
 /* Сетка и оси отступают на задний план — читают данные, а не разметку. */
 .grid { stroke: var(--line-soft); stroke-width: 1; }
-.axis { font-family: var(--font-mono); font-size: 10px; }
+.axis { font-family: var(--font-ui); font-size: 11px; font-variant-numeric: tabular-nums; }
 
 .night { fill: var(--night); }
 .day { fill: var(--day); }
 
 .value {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink);
 }
 

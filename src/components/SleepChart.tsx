@@ -53,7 +53,7 @@ export function SleepChart({ days }: { days: ChartDay[] }) {
   return (
     <figure className={styles.figure}>
       <figcaption className={styles.caption}>
-        <span className={styles.title}>Сколько спал по дням</span>
+        <span className={styles.title}>Суточный сон по дням</span>
         <span className={styles.legend}>
           <span className={styles.key}>
             <i className={styles.swatchNight} aria-hidden="true" /> ночной

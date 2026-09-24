@@ -1,0 +1,118 @@
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-soft);
+  padding: 18px 18px 8px;
+}
+
+.head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.title { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin: 0; }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* Три колонки: дата · шкала · итоги. На телефоне шкала уходит на свою строку. */
+.axisRow, .row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 190px;
+  gap: 14px;
+  align-items: center;
+}
+
+.axis { position: relative; height: 16px; container-type: inline-size; }
+.tick {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.tick:first-child { transform: none; }
+
+.statsHead, .stats {
+  display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 6px; text-align: right;
+}
+.statsHead { font-size: 11px; color: var(--ink-3); }
+
+.rows { list-style: none; margin: 4px 0 0; padding: 0; }
+.row { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.row:first-child { border-top: none; }
+
+.date { display: flex; flex-direction: column; gap: 2px; }
+.dateLabel { font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.todayTag { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: .02em; }
+
+.trackCell { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.track {
+  position: relative; height: 28px;
+  container-type: inline-size;
+  background: var(--surface-2); border-radius: 8px;
+}
+/* Сетка по три часа — волосяная, чтобы не спорить со снами. */
+.grid { position: absolute; top: 4px; bottom: 4px; width: 1px; background: var(--line); }
+.grid:first-child { display: none; }
+
+/* Отрезок сна. Зазор в 2px фоном между соседними — через вертикальный отступ и тень фона. */
+.segment {
+  position: absolute; top: 3px; bottom: 3px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  min-width: 4px; outline: none; cursor: default;
+  transition: filter 120ms ease, transform 120ms ease;
+}
+.segment:hover, .segment:focus-visible { filter: brightness(1.08); transform: scaleY(1.12); z-index: 2; }
+.segment:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+
+.day { background: var(--day); }
+.night { background: var(--night); }
+.segment.day { color: var(--day-on); }
+.segment.night { color: var(--night-on); }
+
+/* Идущий сон — штриховкой: не закончен, длительность ещё растёт. */
+.ongoing {
+  background-image: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255, 255, 255, .28) 5px 8px);
+}
+
+.segLabel { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+.tip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 10px; border-radius: 10px;
+  background: var(--ink); color: var(--bg);
+  font-size: 12px; white-space: nowrap; box-shadow: var(--shadow-lift);
+  pointer-events: none; z-index: 5;
+}
+.tip b { font-size: 14px; }
+
+.now { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--ink); }
+
+.none { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--ink-3); }
+
+.windows { margin: 0; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.windowsLabel { color: var(--ink-3); margin-right: 4px; }
+
+.stats { font-variant-numeric: tabular-nums; }
+.total { font-size: 17px; font-weight: 600; color: var(--ink); display: flex; flex-direction: column; align-items: flex-end; }
+.part { font-size: 14px; color: var(--ink-2); display: flex; flex-direction: column; align-items: flex-end; }
+.part small, .delta { font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.delta { color: var(--ink-2); }
+
+.today .track { box-shadow: inset 0 0 0 1px var(--line); }
+
+@media (max-width: 640px) {
+  .axisRow { grid-template-columns: minmax(0, 1fr); }
+  .axisRow > span:first-child, .statsHead { display: none; }
+  .row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'date stats' 'track track';
+    row-gap: 8px;
+  }
+  .date { grid-area: date; }
+  .stats { grid-area: stats; grid-template-columns: auto auto auto; gap: 12px; }
+  .trackCell { grid-area: track; }
+}
+
+/* Узкая шкала (телефон): подписи средних снов и часы через три часа не влезают. */
+@container (max-width: 520px) {
+  .segLabelWide { display: none; }
+  .tickMinor { display: none; }
+}

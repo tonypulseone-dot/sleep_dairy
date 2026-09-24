@@ -45,6 +45,9 @@
   --night: #2E5AA8;
   --night-soft: #E3E9F7;
   --night-ink: #1C3A6E;
+  /* Текст внутри залитых отрезков сна: подобран по яркости заливки, контраст ≥ 4.5. */
+  --day-on: #191C24;
+  --night-on: #FFFFFF;
 
   --accent: #2E5AA8;
   --accent-ink: #FFFFFF;
@@ -95,6 +98,8 @@
   --night: #5A83D8;
   --night-soft: #18213A;
   --night-ink: #8FAFEA;
+  --day-on: #171104;
+  --night-on: #0B1222;
 
   --accent: #5A83D8;
   --accent-ink: #0B1222;
