@@ -5,6 +5,7 @@ import { DEFAULT_DAY_BOUNDARY, DEFAULT_NIGHT_FROM } from '@/lib/sleep-day';
 import { resolveTheme } from '@/lib/theme';
 import { THEME_BG } from '@/lib/telegram-client';
 import { TelegramChrome } from '@/components/TelegramChrome';
+import './fonts.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -32,12 +33,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ru" data-theme={theme}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&family=JetBrains+Mono:wght@400;500&display=swap"
-        />
+        {/* Шрифты, которые нужны на первом же экране, — заранее, чтобы текст не «прыгал». */}
+        <link rel="preload" href="/fonts/golos-text-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossOrigin="" />
+        <link rel="preload" href="/fonts/golos-text-latin-400-normal.woff2" as="font" type="font/woff2" crossOrigin="" />
+        <link rel="preload" href="/fonts/literata-cyrillic-600-normal.woff2" as="font" type="font/woff2" crossOrigin="" />
         <meta name="theme-color" content={THEME_BG[theme]} />
       </head>
       <body>
