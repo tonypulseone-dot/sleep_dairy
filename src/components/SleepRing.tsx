@@ -1,4 +1,5 @@
 import type { DaySegment } from '@/lib/sleep-day';
+import { partOfDay } from '@/lib/day-parts';
 import styles from './SleepRing.module.css';
 
 /**
@@ -51,6 +52,11 @@ interface Props {
 export function SleepRing({ segments, dayBoundary, nowMinutes, children }: Props) {
   const gapMinutes = (GAP_DEGREES / 360) * 1440;
 
+  // Текущий час на кольце: от начала часа до его конца, в минутах от начала суток.
+  const clockNow = nowMinutes === null ? null : (dayBoundary + nowMinutes) % 1440;
+  const hourStart = nowMinutes === null || clockNow === null ? null : nowMinutes - (clockNow % 60);
+  const partNow = clockNow === null ? null : partOfDay(Math.floor(clockNow / 60));
+
   return (
     <div className={styles.wrap}>
       <svg
@@ -72,22 +78,33 @@ export function SleepRing({ segments, dayBoundary, nowMinutes, children }: Props
           strokeWidth={TRACK_WIDTH}
         />
 
-        {/* Четверти суток: подписи показывают настоящее время, а не доли круга. */}
+        {/* Мягкая подсветка текущего часа — под дугами снов, чтобы их не перекрывать. */}
+        {hourStart !== null && (
+          <path
+            d={arcPath(Math.max(0, hourStart), Math.min(1440, hourStart + 60), RADIUS)}
+            fill="none"
+            strokeWidth={TRACK_WIDTH + 8}
+            strokeLinecap="round"
+            className={styles.hour}
+          />
+        )}
+
+        {/* Четверти суток словами, от маминой утренней границы. Текущая — ярче. */}
         {[0, 6, 12, 18].map((offset) => {
           const minutes = offset * 60;
-          const outer = polar(minutes, RADIUS + 18);
-          const hour = Math.floor(((dayBoundary + minutes) % 1440) / 60);
+          const outer = polar(minutes, RADIUS + 20);
+          const part = partOfDay(Math.floor(((dayBoundary + minutes) % 1440) / 60));
           return (
             <text
               key={offset}
               x={outer.x}
               y={outer.y}
-              className={styles.tick}
+              className={`${styles.tick} ${part === partNow ? styles.tickNow : ''}`}
               textAnchor="middle"
               dominantBaseline="middle"
               fill="currentColor"
             >
-              {hour}
+              {part}
             </text>
           );
         })}
@@ -112,12 +129,10 @@ export function SleepRing({ segments, dayBoundary, nowMinutes, children }: Props
 
         {/* Метку «сейчас» выносим наружу кольца, иначе она сливается с концом дуги. */}
         {nowMinutes !== null && (
-          <circle
-            cx={polar(nowMinutes, RADIUS + 11).x}
-            cy={polar(nowMinutes, RADIUS + 11).y}
-            r={2.6}
-            className={styles.now}
-          />
+          <g className={styles.now}>
+            <circle cx={polar(nowMinutes, RADIUS).x} cy={polar(nowMinutes, RADIUS).y} r={9} className={styles.nowHalo} />
+            <circle cx={polar(nowMinutes, RADIUS).x} cy={polar(nowMinutes, RADIUS).y} r={4} className={styles.nowDot} />
+          </g>
         )}
       </svg>
 

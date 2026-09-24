@@ -6,7 +6,8 @@
   place-items: center;
 }
 
-.svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Подписи «ночь» и «день» выходят за квадрат кольца — в поля экрана. */
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 
 .track { stroke: var(--line); }
 
@@ -22,13 +23,19 @@
 }
 
 .tick {
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: var(--ink-3);
-  letter-spacing: .04em;
+  letter-spacing: .02em;
 }
+.tickNow { color: var(--ink); font-weight: 600; }
 
-.now { fill: var(--ink-2); }
+/* Текущий час: широкая полупрозрачная полоса под кольцом. */
+.hour { stroke: var(--accent); opacity: .16; }
+
+/* «Сейчас» — точка прямо на кольце с мягким ореолом, видно издалека. */
+.nowHalo { fill: var(--accent); opacity: .22; }
+.nowDot { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
 
 .center {
   position: relative;
