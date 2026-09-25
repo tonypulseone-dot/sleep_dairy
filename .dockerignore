@@ -6,3 +6,4 @@ runtime
 .git
 .env*
 *.log
+.claude
