@@ -134,11 +134,14 @@ export function parseDuration(value: unknown): number | null {
 
   let total = 0;
   let found = false;
+  const HOURS = new Set(['ч', 'час', 'часа', 'часов', 'h', 'hr', 'hrs', 'hour', 'hours']);
+  const MINUTES = new Set(['м', 'мин', 'минута', 'минуты', 'минут', 'm', 'min', 'mins', 'minute', 'minutes']);
   for (const [, number, unit] of text.matchAll(/(\d+(?:\.\d+)?)\s*([a-zа-яё]+)/g)) {
-    if (unit.startsWith('ч') || unit.startsWith('h')) {
+    // Строго по списку: «25 мая» — дата, а не 25 минут.
+    if (HOURS.has(unit)) {
       total += Number(number) * 60;
       found = true;
-    } else if ((unit.startsWith('м') && !unit.startsWith('мес')) || unit.startsWith('m')) {
+    } else if (MINUTES.has(unit)) {
       total += Number(number);
       found = true;
     }

@@ -24,8 +24,9 @@ import { finalizeSleeps, normalizeTime, parseDuration, spanMinutes, type Recogni
 export function transcribePrompt(): string {
   return `Перепиши весь текст с этого скриншота построчно, сверху вниз, точно как написано. Ничего не пропускай, не объясняй и не пересчитывай.
 Правила:
-- Каждая строка экрана — отдельной строкой.
+- Каждая строка экрана — отдельной строкой. НЕ объединяй разные строки в одну: время над плашкой, плашка и время под плашкой — три разные строки.
 - Если в одной строке есть что-то слева и справа — пиши через « | ».
+- Не пропускай ни одного времени (вида 07:02, 21:10) — даже если оно стоит отдельно или мелко.
 - Если строка находится внутри цветной плашки или карточки, начни её с [ПЛАШКА].
 - Значки (луна, солнце) пиши словами: [луна], [солнце].
 - Цифры и время переписывай в точности, со всеми знаками («07:02, 13 авг», «9 часов 52 минуты»).`;
@@ -98,6 +99,12 @@ function timesIn(line: string): { value: string; at: number; end: number }[] {
   return out;
 }
 
+const toMin = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+const toClock = (minutes: number) => {
+  const value = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+};
+
 const NOT_SLEEP = /корм|бутыл|груд(?!н)|сцеж|прикорм|прогул|купан|подгуз|лекарств|бодрств|вб:/i;
 
 interface Line {
@@ -160,14 +167,26 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
   // 2. Лента: одиночные времена и длительности в плашках.
   const points: { value: string; date: string | null; context: string | null }[] = [];
   const plates: number[] = [];
+  // Длительности вне плашек — бодрствования: ими проверяем восстановленное время.
+  const wakes: number[] = [];
   for (const line of lines) {
     const times = timesIn(line.text);
+    const cells = line.text.split('|').map((cell) => cell.trim());
     if (times.length === 1) {
       const rest = line.text.slice(times[0].end);
-      points.push({ value: times[0].value, date: datesIn(rest, today, line.context)[0]?.date ?? null, context: line.context });
-    } else if (times.length === 0 && line.plate && !NOT_SLEEP.test(line.text)) {
-      const minutes = parseDuration(line.text.split('|')[0]);
+      points.push({ value: times[0].value, date: datesIn(rest.split('|')[0], today, line.context)[0]?.date ?? null, context: line.context });
+      for (const cell of cells.slice(1)) {
+        const minutes = parseDuration(cell);
+        if (minutes) wakes.push(minutes);
+      }
+    } else if (times.length === 0 && line.plate && !NOT_SLEEP.test(line.text) && datesIn(line.text, today).length === 0) {
+      const minutes = parseDuration(cells[0]);
       if (minutes) plates.push(minutes);
+    } else if (times.length === 0 && !line.plate && datesIn(line.text, today).length === 0) {
+      for (const cell of cells) {
+        const minutes = parseDuration(cell);
+        if (minutes) wakes.push(minutes);
+      }
     }
   }
   if (points.length < 2 || plates.length === 0) return null;
@@ -183,17 +202,65 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
   const descending = down >= up;
 
   const used = new Set<number>();
+  const boundary = new Set<number>();
   const sleeps: RecognizedSleep[] = [];
   for (let i = 0; i + 1 < points.length; i += 1) {
     const [first, second] = descending ? [points[i + 1], points[i]] : [points[i], points[i + 1]];
     const minutes = spanMinutes(first.value, second.value);
-    const plate = plates.findIndex((value, index) => !used.has(index) && Math.abs(value - minutes) <= 3);
+    // Самая близкая по длительности свободная плашка, а не первая в пределах ±3 минут:
+    // иначе «41 минута» забирает пару в 42 минуты у своей соседки.
+    let plate = -1;
+    plates.forEach((value, index) => {
+      if (used.has(index) || Math.abs(value - minutes) > 3) return;
+      if (plate === -1 || Math.abs(value - minutes) < Math.abs(plates[plate] - minutes)) plate = index;
+    });
     if (plate === -1) continue; // бодрствование между снами
     used.add(plate);
+    boundary.add(i);
+    boundary.add(i + 1);
     const crosses = first.value > second.value;
     const date = first.date ?? (crosses && second.date ? shift(second.date, -1) : first.context);
     sleeps.push({ date, start: first.value, end: second.value, doubtful: false, stated: plates[plate] });
   }
+
+  /*
+   * Модель иногда теряет строку со временем (склеивает строки). Тогда у
+   * плашки нет пары — восстанавливаем недостающий край из длительности:
+   * в ленте «новое сверху» известен конец сна (время над плашкой), начало =
+   * конец − длительность. Проверка — бодрствование: от времени ниже до
+   * восстановленного начала должно пройти столько, сколько написано на
+   * экране. Не сошлось — сон всё равно показываем, но с «проверьте».
+   * Плашки и свободные времена идут по экрану в одном порядке — так и сопоставляем.
+   */
+  let cursor = 0;
+  plates.forEach((plate, plateIndex) => {
+    if (used.has(plateIndex)) return;
+    for (let i = cursor; i < points.length; i += 1) {
+      if (boundary.has(i)) continue;
+      const anchor = points[i];
+      const neighbour = descending ? points[i + 1] : points[i - 1];
+      const shiftBy = descending ? -plate : plate;
+      const other = toClock(toMin(anchor.value) + shiftBy);
+      // Восстановленный край не должен заходить за соседнее время.
+      if (neighbour) {
+        const gap = descending ? spanMinutes(neighbour.value, other) : spanMinutes(other, neighbour.value);
+        const whole = descending ? spanMinutes(neighbour.value, anchor.value) : spanMinutes(anchor.value, neighbour.value);
+        if (gap >= whole) continue;
+      }
+      const wakeGap = neighbour
+        ? descending
+          ? spanMinutes(neighbour.value, other)
+          : spanMinutes(other, neighbour.value)
+        : null;
+      const confirmed = wakeGap !== null && wakes.some((value) => Math.abs(value - wakeGap) <= 3);
+      const [start, end] = descending ? [other, anchor.value] : [anchor.value, other];
+      sleeps.push({ date: anchor.date ?? anchor.context, start, end, doubtful: !confirmed, stated: plate });
+      used.add(plateIndex);
+      boundary.add(i);
+      cursor = i + 1;
+      return;
+    }
+  });
   if (sleeps.length === 0) return null;
   return finalizeSleeps(sleeps, points.find((point) => point.context)?.context ?? null);
 }
