@@ -42,11 +42,16 @@ export async function POST(request: Request) {
   const fixture = IMPORT_FIXTURES.find((item) => item.id === id);
   if (!fixture) return NextResponse.json({ error: 'Неизвестный case', cases: IMPORT_FIXTURES.map((item) => item.id) }, { status: 400 });
 
+  // Для подбора подсказки можно прислать свою ({today} подставится) и другую модель.
+  const body = (await request.json().catch(() => ({}))) as { prompt?: string; model?: string };
+  const prompt = body.prompt ? body.prompt.replaceAll('{today}', fixture.today) : screenshotPrompt(fixture.today);
+  const model = body.model || GIGACHAT_MODEL;
+
   const image = await readFile(path.join(process.cwd(), 'public', 'diag', `${fixture.id}.jpg`));
   const started = Date.now();
   let raw: string;
   try {
-    raw = await askGigaChat(screenshotPrompt(fixture.today), { data: image, mime: 'image/jpeg' });
+    raw = await askGigaChat(prompt, { data: image, mime: 'image/jpeg' }, model);
   } catch (error) {
     return NextResponse.json({ case: fixture.id, error: error instanceof Error ? error.message : String(error) }, { status: 502 });
   }
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     case: fixture.id,
     title: fixture.title,
-    model: GIGACHAT_MODEL,
+    model,
     seconds: Math.round((Date.now() - started) / 100) / 10,
     ok: parsed.screen === fixture.screen && fixture.expected.every((item) => plain.has(item)) && plain.size === expected.size,
     screen: { expected: fixture.screen, got: parsed.screen },

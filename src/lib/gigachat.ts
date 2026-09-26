@@ -129,7 +129,11 @@ async function deleteFile(id: string): Promise<void> {
 }
 
 /** Один вопрос к модели. С картинкой — если передана. Возвращает текст ответа. */
-export async function askGigaChat(prompt: string, image?: { data: Buffer; mime: string }): Promise<string> {
+export async function askGigaChat(
+  prompt: string,
+  image?: { data: Buffer; mime: string },
+  model: string = GIGACHAT_MODEL,
+): Promise<string> {
   const fileId = image ? await uploadImage(image.data, image.mime) : null;
   try {
     const response = await authorized(
@@ -138,7 +142,7 @@ export async function askGigaChat(prompt: string, image?: { data: Buffer; mime: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: GIGACHAT_MODEL,
+          model,
           // Нужна не фантазия, а переписывание цифр: минимум случайности.
           temperature: 0.01,
           max_tokens: 2000,
