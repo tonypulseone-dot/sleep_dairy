@@ -45,3 +45,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.local
+# отметка неудачного автообновления (scripts/auto-update.sh)
+.update-failed

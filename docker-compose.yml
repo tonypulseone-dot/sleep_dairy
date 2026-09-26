@@ -52,6 +52,9 @@ services:
       GIGACHAT_AUTH_KEY: ${GIGACHAT_AUTH_KEY:-}
       GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
       GIGACHAT_MODEL: ${GIGACHAT_MODEL:-}
+      # Версия — короткий хеш коммита; пишет её scripts/auto-update.sh.
+      # Видна по адресу /api/health.
+      APP_VERSION: ${APP_VERSION:-dev}
     depends_on:
       migrate:
         condition: service_completed_successfully
