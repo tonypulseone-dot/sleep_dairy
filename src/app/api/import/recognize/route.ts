@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentChild, currentParent } from '@/lib/session';
-import { askGigaChat, gigachatConfigured, GigaChatError } from '@/lib/gigachat';
-import { notesPrompt, parseRecognized, screenshotPrompt } from '@/lib/import-parse';
+import { gigachatConfigured, GigaChatError } from '@/lib/gigachat';
+import { recognizeNotes, recognizeScreenshot } from '@/lib/recognize';
 import { localDate } from '@/lib/sleep-day';
 
 /**
@@ -53,17 +53,16 @@ export async function POST(request: Request) {
   const text = form.get('text');
 
   const today = localDate(new Date(), parent.timeZone);
-  let prompt: string;
   let attachment: { data: Buffer; mime: string } | undefined;
+  let notes: string | undefined;
 
   if (image instanceof File) {
     if (!IMAGE_TYPES.has(image.type)) return fail('Нужна картинка — скриншот в JPG или PNG', 400);
     if (image.size > MAX_IMAGE_BYTES) return fail('Картинка слишком большая — до 8 МБ', 400);
-    prompt = screenshotPrompt(today);
     attachment = { data: Buffer.from(await image.arrayBuffer()), mime: image.type };
   } else if (typeof text === 'string' && text.trim()) {
     if (text.length > MAX_TEXT) return fail('Слишком длинный текст — вставьте заметки частями', 400);
-    prompt = notesPrompt(today, text.trim());
+    notes = text.trim();
   } else {
     return fail('Прикрепите скриншот или вставьте текст', 400);
   }
@@ -73,8 +72,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const content = await askGigaChat(prompt, attachment);
-    return NextResponse.json(parseRecognized(content, today));
+    const result = attachment
+      ? (await recognizeScreenshot(attachment, today)).result
+      : await recognizeNotes(notes ?? '', today);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Перенос снов: ошибка распознавания', error);
     if (error instanceof GigaChatError && error.kind === 'quota') {

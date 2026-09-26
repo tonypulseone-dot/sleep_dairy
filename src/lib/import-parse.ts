@@ -267,3 +267,40 @@ export function parseRecognized(content: string, today: string): Recognized {
     swapped,
   };
 }
+
+/**
+ * Общий хвост для снов, собранных из переписанного текста
+ * (import-transcript.ts): без повторов, ночь перед утренними снами —
+ * накануне, по порядку.
+ */
+export function finalizeSleeps(list: RecognizedSleep[], screenDate: string | null): Recognized {
+  const seen = new Set<string>();
+  const sleeps = list.filter((sleep) => {
+    if (sleep.start === sleep.end) return false;
+    const key = `${sleep.date}|${sleep.start}|${sleep.end}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  fixMorningNights(sleeps);
+  sleeps.sort((a, b) => `${a.date ?? ''}${a.start}`.localeCompare(`${b.date ?? ''}${b.start}`));
+  return { date: screenDate, sleeps, timesVisible: sleeps.length > 0, screen: 'list', dropped: 0, swapped: 0 };
+}
+
+/** Разбор текста нейросетью — для заметок и для скриншотов незнакомого вида. */
+export function textPrompt(today: string, text: string, source: 'notes' | 'screenshot'): string {
+  const intro =
+    source === 'notes'
+      ? 'Ниже — заметки мамы о снах ребёнка, скопированные из заметок или переписки.'
+      : 'Ниже — текст, переписанный со скриншота приложения, где мама отмечает сны ребёнка, строка за строкой сверху вниз. «[ПЛАШКА]» — строка в цветной плашке (обычно блок сна), « | » — левая и правая часть одной строки.';
+  return `${intro} Выпиши все сны с временем начала и конца.
+
+${rules(today)}
+
+${FORMAT}
+
+Текст:
+"""
+${text}
+"""`;
+}

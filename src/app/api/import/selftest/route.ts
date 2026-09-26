@@ -7,6 +7,7 @@ import { consultants } from '@/db/schema';
 import { verifyPassword } from '@/lib/password';
 import { askGigaChat, gigachatConfigured, GIGACHAT_MODEL } from '@/lib/gigachat';
 import { parseRecognized, screenshotPrompt } from '@/lib/import-parse';
+import { recognizeScreenshot } from '@/lib/recognize';
 import { IMPORT_FIXTURES } from '@/lib/import-fixtures';
 
 /**
@@ -50,12 +51,23 @@ export async function POST(request: Request) {
   const image = await readFile(path.join(process.cwd(), 'public', 'diag', `${fixture.id}.jpg`));
   const started = Date.now();
   let raw: string;
+  let parsed;
+  let stage = 'prompt';
   try {
-    raw = await askGigaChat(prompt, { data: image, mime: 'image/jpeg' }, model);
+    if (body.prompt) {
+      // Подбор подсказки: одна своя просьба к модели, ответ — как есть.
+      raw = await askGigaChat(prompt, { data: image, mime: 'image/jpeg' }, model);
+      parsed = parseRecognized(raw, fixture.today);
+    } else {
+      // Боевой путь — тот же, что у мамы в приложении.
+      const run = await recognizeScreenshot({ data: image, mime: 'image/jpeg' }, fixture.today);
+      raw = run.transcript;
+      parsed = run.result;
+      stage = run.stage;
+    }
   } catch (error) {
     return NextResponse.json({ case: fixture.id, error: error instanceof Error ? error.message : String(error) }, { status: 502 });
   }
-  const parsed = parseRecognized(raw, fixture.today);
   const found = parsed.sleeps.map((sleep) => `${sleep.date} ${sleep.start}-${sleep.end}${sleep.doubtful ? ' ?' : ''}`);
   const plain = new Set(found.map((item) => item.replace(' ?', '')));
   const expected = new Set(fixture.expected);
@@ -70,6 +82,7 @@ export async function POST(request: Request) {
     missing: fixture.expected.filter((item) => !plain.has(item)),
     extra: [...plain].filter((item) => !expected.has(item)),
     found,
+    stage,
     swapped: parsed.swapped,
     dropped: parsed.dropped,
     raw,
