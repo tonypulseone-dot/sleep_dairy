@@ -25,7 +25,7 @@ export function transcribePrompt(): string {
   return `Перепиши весь текст с этого скриншота построчно, сверху вниз, точно как написано. Ничего не пропускай, не объясняй и не пересчитывай.
 Правила:
 - Каждая строка экрана — отдельной строкой. НЕ объединяй разные строки в одну: время над плашкой, плашка и время под плашкой — три разные строки.
-- Если в одной строке есть что-то слева и справа — пиши через « | ».
+- Если в одной строке есть что-то слева и справа — пиши через « | ». Числа и длительности справа («1 ч 15 м», «4») обязательно переписывай тоже.
 - Не пропускай ни одного времени (вида 07:02, 21:10) — даже если оно стоит отдельно или мелко.
 - Если строка находится внутри цветной плашки или карточки, начни её с [ПЛАШКА].
 - Значки (луна, солнце) пиши словами: [луна], [солнце].
@@ -105,11 +105,29 @@ const toClock = (minutes: number) => {
   return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 };
 
+/** Длительности сна рядом с диапазоном: хвост строки и следующая строка без времени; без ВБ и бодрствования. */
+function durationsNear(lines: Line[], index: number, from: number): number[] {
+  const cells = [lines[index].text.slice(from)];
+  const next = lines[index + 1];
+  if (next && timesIn(next.text).length === 0) cells.push(next.text);
+  const out: number[] = [];
+  for (const chunk of cells) {
+    for (const cell of chunk.split('|')) {
+      if (/вб|бодрств/i.test(cell)) continue;
+      const minutes = parseDuration(cell.replace(/^\s*(дс|нс)\s*:/i, ''));
+      if (minutes) out.push(minutes);
+    }
+  }
+  return out;
+}
+
 const NOT_SLEEP = /корм|бутыл|груд(?!н)|сцеж|прикорм|прогул|купан|подгуз|лекарств|бодрств|вб:/i;
 
 interface Line {
   text: string;
   plate: boolean;
+  /** Значок сна (луна, солнце) или номер сна справа («| 4») — признак блока сна в ленте. */
+  sleepMark: boolean;
   /** Дата, действующая для этой строки (последний заголовок выше). */
   context: string | null;
 }
@@ -119,6 +137,7 @@ function readLines(transcript: string, today: string): Line[] {
   const lines: Line[] = [];
   for (const rawLine of transcript.split('\n')) {
     const plate = /\[плашка\]/i.test(rawLine);
+    const sleepMark = /\[(луна|солнце)\]|[☾☀☼🌙*]|\|\s*\d{1,2}\s*$/i.test(rawLine);
     const text = rawLine.replace(/\[(плашка|луна|солнце)\]/gi, ' ').replace(/\s+/g, ' ').trim();
     if (!text) continue;
     const hasTime = timesIn(text).length > 0;
@@ -129,7 +148,7 @@ function readLines(transcript: string, today: string): Line[] {
     if (dates.length > 0 && !hasTime) {
       context = dates.length > 1 && dates[0].hasYear && !dates[1].hasYear ? dates[0].date : dates[dates.length - 1].date;
     }
-    lines.push({ text, plate, context });
+    lines.push({ text, plate, sleepMark, context });
   }
   return lines;
 }
@@ -151,23 +170,36 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
 
   // 1. Диапазоны «20:35 - 06:48».
   const ranged: RecognizedSleep[] = [];
-  for (const line of lines) {
-    if (NOT_SLEEP.test(line.text)) continue;
+  lines.forEach((line, lineIndex) => {
+    if (NOT_SLEEP.test(line.text)) return;
     const times = timesIn(line.text);
     for (let i = 0; i + 1 < times.length; i += 1) {
       const between = line.text.slice(times[i].end, times[i + 1].at);
       if (!/^\s*[-–—]\s*$/.test(between)) continue;
       const explicit = datesIn(line.text, today, line.context)[0]?.date ?? null;
-      ranged.push({ date: explicit ?? line.context, start: times[i].value, end: times[i + 1].value, doubtful: false, stated: null });
+      const start = times[i].value;
+      const end = times[i + 1].value;
+      // Длительность рядом (справа в строке или в следующей строке карточки) —
+      // проверка, что цифры прочитаны верно: «08:55 - 09:50» при «1 ч 15 м» — ошибка.
+      const nearby = durationsNear(lines, lineIndex, times[i + 1].end);
+      const span = spanMinutes(start, end);
+      const matches = nearby.find((value) => Math.abs(value - span) <= 3);
+      ranged.push({
+        date: explicit ?? line.context,
+        start,
+        end,
+        doubtful: nearby.length > 0 && matches === undefined,
+        stated: matches ?? nearby[0] ?? null,
+      });
       i += 1;
     }
-  }
+  });
   if (ranged.length > 0) return finalizeSleeps(ranged, lines.find((line) => line.context)?.context ?? null);
 
   // 2. Лента: одиночные времена и длительности в плашках.
   const points: { value: string; date: string | null; context: string | null }[] = [];
-  const plates: number[] = [];
-  // Длительности вне плашек — бодрствования: ими проверяем восстановленное время.
+  // Строки-длительности без времени: из них — длительности снов (плашки) и бодрствований.
+  const durationLines: { minutes: number; plate: boolean; mark: boolean }[] = [];
   const wakes: number[] = [];
   for (const line of lines) {
     const times = timesIn(line.text);
@@ -179,16 +211,23 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
         const minutes = parseDuration(cell);
         if (minutes) wakes.push(minutes);
       }
-    } else if (times.length === 0 && line.plate && !NOT_SLEEP.test(line.text) && datesIn(line.text, today).length === 0) {
+    } else if (times.length === 0 && !NOT_SLEEP.test(line.text) && datesIn(line.text, today).length === 0) {
       const minutes = parseDuration(cells[0]);
-      if (minutes) plates.push(minutes);
-    } else if (times.length === 0 && !line.plate && datesIn(line.text, today).length === 0) {
-      for (const cell of cells) {
-        const minutes = parseDuration(cell);
-        if (minutes) wakes.push(minutes);
-      }
+      if (minutes) durationLines.push({ minutes, plate: line.plate, mark: line.sleepMark });
     }
   }
+  /*
+   * Какие длительности — сны. Надёжнее всего значок или номер сна («| 4»);
+   * нет их — плашка (если плашками помечено не всё подряд); иначе все
+   * длительности, а сны отберём по чередованию (см. ниже).
+   */
+  const marked = durationLines.filter((item) => item.mark);
+  const plated = durationLines.filter((item) => item.plate);
+  const sleepLines =
+    marked.length > 0 ? marked : plated.length > 0 && plated.length < durationLines.length ? plated : durationLines;
+  const byAlternation = sleepLines === durationLines;
+  const plates = sleepLines.map((item) => item.minutes);
+  for (const item of durationLines) if (!sleepLines.includes(item)) wakes.push(item.minutes);
   if (points.length < 2 || plates.length === 0) return null;
 
   // Лента вниз от новых к старым или наоборот — по большинству соседних пар.
@@ -262,5 +301,21 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
     }
   });
   if (sleeps.length === 0) return null;
+  if (byAlternation) return finalizeSleeps(keepAlternating(sleeps), points.find((point) => point.context)?.context ?? null);
   return finalizeSleeps(sleeps, points.find((point) => point.context)?.context ?? null);
+}
+
+/**
+ * Все длительности ленты совпали с парами времён — и сны, и бодрствования.
+ * Они чередуются; ночь (через полночь) — всегда сон. Оставляем ту половину
+ * чередования, в которую попала ночь, а без ночи — ту, где суммарно дольше.
+ */
+function keepAlternating(all: RecognizedSleep[]): RecognizedSleep[] {
+  const ordered = [...all].sort((a, b) => `${a.date ?? ''}${a.start}`.localeCompare(`${b.date ?? ''}${b.start}`));
+  const even = ordered.filter((_, index) => index % 2 === 0);
+  const odd = ordered.filter((_, index) => index % 2 === 1);
+  const hasNight = (list: RecognizedSleep[]) => list.some((sleep) => sleep.start > sleep.end);
+  if (hasNight(even) !== hasNight(odd)) return hasNight(even) ? even : odd;
+  const total = (list: RecognizedSleep[]) => list.reduce((sum, sleep) => sum + spanMinutes(sleep.start, sleep.end), 0);
+  return total(even) >= total(odd) ? even : odd;
 }
