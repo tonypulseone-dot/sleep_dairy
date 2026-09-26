@@ -10,7 +10,7 @@
 .kpi {
   --k: var(--ink-3);
   position: relative; overflow: hidden;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 4px;
   padding: 14px 16px 14px 18px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: var(--shadow-soft);
@@ -24,7 +24,7 @@
 .kpiWarn { --k: var(--energy-explore); background: var(--energy-explore-soft); border-color: transparent; }
 .kpiLabel { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .kpiValue {
-  font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1.1;
+  font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1.2;
   font-variant-numeric: tabular-nums; color: var(--ink);
 }
 .kpiHint { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }

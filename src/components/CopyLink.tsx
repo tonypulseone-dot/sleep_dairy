@@ -48,17 +48,13 @@ export function CopyButton({
   );
 }
 
-/** Ссылка-приглашение с кнопкой «Скопировать». */
+/** Ссылка-приглашение целиком (с переносом, а не обрезанная) и кнопка «Скопировать». */
 export function CopyLink({ link }: { link: string }) {
   return (
     <div className={styles.copyRow}>
-      <input
-        className={styles.copyField}
-        value={link}
-        readOnly
-        aria-label="Ссылка для мам"
-        onFocus={(event) => event.currentTarget.select()}
-      />
+      <code className={styles.copyField} aria-label="Ссылка для мам">
+        {link}
+      </code>
       <CopyButton text={link} />
     </div>
   );

@@ -214,3 +214,15 @@
 }
 .emptyTitle { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0; }
 .emptyText { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); max-width: 34ch; }
+
+/* Заголовок дня: полный — «чт, 24 сентября», на узком экране — «чт, 24 сент.». */
+.title { white-space: nowrap; }
+.titleShort { display: none; }
+@media (max-width: 359px) {
+  /* Полный остаётся для экранного чтеца, глазом виден короткий. */
+  .titleLong {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .titleShort { display: inline; }
+}

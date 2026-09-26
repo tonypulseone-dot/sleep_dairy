@@ -122,6 +122,14 @@ export default async function DayPage({
     duration: formatDuration(durationMinutes(row.startedAt, row.endedAt, now)),
   }));
 
+  // Короткий заголовок для узких экранов: «чт, 24 сентября» на 320 точках не влезает в строку.
+  const titleShort = new Intl.DateTimeFormat('ru-RU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: parent.timeZone,
+  }).format(new Date(`${sleepDay}T12:00:00Z`));
+
   const title = new Intl.DateTimeFormat('ru-RU', {
     weekday: 'short',
     day: 'numeric',
@@ -139,6 +147,7 @@ export default async function DayPage({
       asleep={query.asleep === '1'}
       nowClock={time.format(now)}
       title={title}
+      titleShort={titleShort}
       prevDay={shiftDate(sleepDay, -1)}
       nextDay={sleepDay < today ? shiftDate(sleepDay, 1) : null}
       rows={view}

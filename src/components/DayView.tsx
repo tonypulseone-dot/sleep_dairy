@@ -37,6 +37,8 @@ export interface DayTotalsView {
 
 interface Props {
   sleepDay: string;
+  /** «чт, 24 сент.» — для узких экранов. */
+  titleShort: string;
   /** Сегодняшние сонные сутки — для выбора «сегодня / вчера / позавчера». */
   today: string;
   dayBoundary: number;
@@ -201,6 +203,7 @@ export function DayView({
   asleep = false,
   nowClock,
   title,
+  titleShort,
   prevDay,
   nextDay,
   rows,
@@ -263,7 +266,12 @@ export function DayView({
           <Link href={`/day?d=${prevDay}`} className={styles.step} aria-label="Предыдущий день">
             <IconBack />
           </Link>
-          <span className={styles.title}>{title}</span>
+          <span className={styles.title}>
+            <span className={styles.titleLong}>{title}</span>
+            <span className={styles.titleShort} aria-hidden="true">
+              {titleShort}
+            </span>
+          </span>
           {nextDay ? (
             <Link href={`/day?d=${nextDay}`} className={styles.step} aria-label="Следующий день">
               <IconForward />
