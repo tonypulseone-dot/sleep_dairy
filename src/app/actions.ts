@@ -65,8 +65,12 @@ export async function startSleep(minutesAgo = 0) {
   return guard(async () => {
     const { child, window } = await requireContext();
 
-    // Двойное нажатие не должно плодить параллельные сны.
-    if (await openSleepOf(child.id)) return;
+    // Двойное нажатие не должно плодить параллельные сны. Экран при этом
+    // обновляем: сон мог начаться с другого устройства, а кнопка — устареть.
+    if (await openSleepOf(child.id)) {
+      revalidatePath('/');
+      return;
+    }
 
     let startedAt = shiftBack(new Date(), minutesAgo);
     // «Уснула 15 мин назад» сразу после записанного сна не должно залезать
@@ -140,7 +144,11 @@ export async function stopSleep(minutesAgo = 0) {
     const { child, window } = await requireContext();
 
     const open = await openSleepOf(child.id);
-    if (!open) return;
+    if (!open) {
+      // Сон уже закрыт (например, с другого устройства) — просто обновим экран.
+      revalidatePath('/');
+      return;
+    }
 
     const now = new Date();
     const endedAt = shiftBack(now, minutesAgo);

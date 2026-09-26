@@ -52,6 +52,7 @@ export function SleepToggle({
 
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [offset, setOffset] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Часы тикают только в браузере: на сервере «сейчас» ещё нет,
@@ -68,18 +69,28 @@ export function SleepToggle({
   // Без отсчёта (ни одного сна) показываем не старое значение, а ничего.
   const minutes = since ? elapsed : null;
 
+  /*
+   * Проснуться «N мин назад» можно, только если сон длится дольше N минут:
+   * иначе пробуждение оказалось бы раньше засыпания. Такие варианты гасим,
+   * а выбранный недоступный — сбрасываем на «сейчас».
+   */
+  const unavailable = (value: number) => isSleeping && value > 0 && minutes !== null && value >= minutes;
+  const chosen = unavailable(offset) ? 0 : offset;
+
   const act = () => {
     haptic('tap');
+    setError(null);
     startTransition(async () => {
       try {
-        if (isSleeping) unwrap(await stopSleep(offset));
-        else unwrap(await startSleep(offset));
+        if (isSleeping) unwrap(await stopSleep(chosen));
+        else unwrap(await startSleep(chosen));
         haptic('success');
-      } catch (error) {
+        setOffset(0);
+      } catch (cause) {
+        // Ошибку показываем словами под кнопкой, а не роняем весь экран.
         haptic('error');
-        throw error;
+        setError(cause instanceof Error ? cause.message : 'Не получилось сохранить — попробуйте ещё раз');
       }
-      setOffset(0);
     });
   };
 
@@ -95,6 +106,12 @@ export function SleepToggle({
           <span className={styles.bigLabel}>{isSleeping ? words.wokeUp : words.fellAsleep}</span>
         </button>
       </SleepRing>
+
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
 
       <div className={styles.status} aria-live="polite">
         <p className={styles.elapsed}>
@@ -139,13 +156,15 @@ export function SleepToggle({
             <button
               key={value}
               type="button"
-              aria-pressed={offset === value}
+              aria-pressed={chosen === value}
               aria-label={value === 0 ? 'Сейчас' : `${value} минут назад`}
+              disabled={unavailable(value)}
               onClick={() => {
                 haptic('select');
+                setError(null);
                 setOffset(value);
               }}
-              className={`${styles.offset} ${offset === value ? styles.offsetOn : ''}`}
+              className={`${styles.offset} ${chosen === value ? styles.offsetOn : ''}`}
             >
               {value === 0 ? (
                 'сейчас'

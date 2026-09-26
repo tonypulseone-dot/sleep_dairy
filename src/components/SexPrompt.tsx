@@ -17,8 +17,12 @@ export function SexPrompt({ name }: { name: string }) {
 
   const choose = (sex: ChildSex) =>
     startTransition(async () => {
-      unwrap(await setChildSex(sex));
-      router.refresh();
+      try {
+        unwrap(await setChildSex(sex));
+        router.refresh();
+      } catch {
+        // Не сохранилось — карточка останется, мама нажмёт ещё раз; экран не роняем.
+      }
     });
 
   return (

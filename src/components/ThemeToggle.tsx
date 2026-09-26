@@ -34,9 +34,16 @@ export function ThemeToggle({ theme, className }: { theme: Theme; className?: st
       onClick={() => {
         applyTheme(next);
         startTransition(async () => {
+          const previous = current;
           setCurrent(next);
-          unwrap(await setThemePref(next));
-          router.refresh();
+          try {
+            unwrap(await setThemePref(next));
+            router.refresh();
+          } catch {
+            // Не сохранилось (связь, сессия) — возвращаем как было, экран не роняем.
+            setCurrent(previous);
+            applyTheme(previous);
+          }
         });
       }}
     >

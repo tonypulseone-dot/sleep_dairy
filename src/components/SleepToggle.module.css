@@ -112,3 +112,10 @@
  */
 :global(:root[data-theme='dark'][data-hush]) .big { filter: brightness(.72) saturate(.72); }
 :global(:root[data-theme='dark'][data-hush]) .big:disabled { filter: brightness(.6) saturate(.5); }
+
+.error {
+  margin: -4px 0 0; padding: 8px 12px; border-radius: 12px; text-align: center;
+  background: var(--day-soft); color: var(--day-ink); font-size: 14px; line-height: 1.4;
+}
+/* «15 мин назад», когда сон идёт 5 минут, — недоступно: пробуждение раньше засыпания. */
+.offset:disabled { opacity: .35; cursor: default; }
