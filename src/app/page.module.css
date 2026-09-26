@@ -179,3 +179,14 @@
   box-shadow: 0 3px 12px -3px color-mix(in srgb, var(--accent) var(--glow), transparent);
 }
 .transferTitle { font-size: 15px; font-weight: 600; }
+
+/* «Уснула раньше?» — тихая ссылка под выбором «сейчас / 5 / 10 / 15 мин». */
+.earlier {
+  align-self: center; margin-top: -8px; min-height: 44px; padding: 0 12px;
+  display: inline-flex; align-items: center;
+  font-size: 14px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+}
+.more {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 13.5px; font-weight: 500; color: var(--accent);
+}

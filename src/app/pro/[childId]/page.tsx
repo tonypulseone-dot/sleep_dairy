@@ -79,7 +79,8 @@ export default async function ClientCard({
   const rows = await db
     .select()
     .from(sleeps)
-    .where(and(eq(sleeps.childId, childId), gte(sleeps.sleepDay, from)))
+    // С запасом в сутки: ночь накануне нужна, чтобы посчитать бодрствование с утра.
+    .where(and(eq(sleeps.childId, childId), gte(sleeps.sleepDay, shiftDate(from, -1))))
     .orderBy(asc(sleeps.startedAt));
 
   const byDay = new Map<string, { startedAt: Date; endedAt: Date | null }[]>();
@@ -104,6 +105,18 @@ export default async function ClientCard({
   for (const row of rows) byDayRows.set(row.sleepDay, [...(byDayRows.get(row.sleepDay) ?? []), row]);
   const clock = (at: Date) => formatTimeOfDay(localMinutes(at, window.timeZone));
   const timelineLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  // Бодрствование с утра: от пробуждения после ночи (она во вчерашних сутках) до первого сна дня.
+  const morningWake = (sleepDay: string): string | null => {
+    const first = byDayRows.get(sleepDay)?.[0];
+    if (!first) return null;
+    const limit = dayStartInstant(sleepDay, window).getTime() - 12 * 3_600_000;
+    const before = rows.filter(
+      (row) => row.endedAt && row.endedAt.getTime() <= first.startedAt.getTime() && row.endedAt.getTime() >= limit,
+    ).at(-1);
+    if (!before?.endedAt) return null;
+    const minutes = durationMinutes(before.endedAt, first.startedAt);
+    return minutes > 0 ? formatDuration(minutes) : null;
+  };
   const timeline: TimelineDay[] = days.map((day) => {
     const start = dayStartInstant(day.sleepDay, window).getTime();
     const minutesFrom = (at: Date) => (at.getTime() - start) / 60000;
@@ -129,6 +142,7 @@ export default async function ClientCard({
       isToday: day.sleepDay === today,
       segments,
       wakeWindows: day.wakeWindows.map(formatDuration),
+      morningWake: morningWake(day.sleepDay),
       total: formatDuration(day.totalSleep),
       day: formatDuration(day.daySleep),
       night: formatDuration(day.nightSleep),
@@ -267,7 +281,7 @@ export default async function ClientCard({
       <SleepTimeline
         days={timeline}
         dayBoundary={child.dayBoundaryMinutes}
-        hint="Каждая строка — сутки от утренней границы. Под шкалой — время каждого сна и бодрствования (↔) между ними, справа — итоги и отклонение от среднего (▲▼)."
+        hint="Каждая строка — сутки от утренней границы. Под шкалой — время каждого сна и бодрствования (↔): первое — с утра, после ночи, дальше — между снами. Справа — итоги и отклонение от среднего (▲▼)."
       />
 
       <div className={styles.average}>

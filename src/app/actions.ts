@@ -16,7 +16,7 @@ import {
 import { CONSENT_VERSION } from '@/lib/consent';
 import { MAX_AGE_DAYS } from '@/lib/import-parse';
 import { defaultConsultant } from '@/lib/default-consultant';
-import type { ChildSex } from '@/lib/words';
+import { childWords, type ChildSex } from '@/lib/words';
 import { clearSessionCookie, currentChild, currentParent } from '@/lib/session';
 import {
   composeSleep,
@@ -87,6 +87,50 @@ export async function startSleep(minutesAgo = 0) {
       source: 'timer',
     });
     revalidatePath('/');
+  });
+}
+
+/**
+ * Сон, который ещё идёт, но начался давно: мама вспомнила через час.
+ * Кнопки «5/10/15 мин назад» так далеко не достают — время указывают руками,
+ * а конец отметят кнопкой «Проснулась», как обычно.
+ */
+export async function startSleepAt(input: { sleepDay: string; start: string }) {
+  return guard(async () => {
+    const { child, window } = await requireContext();
+    const words = childWords(child.sex);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sleepDay)) throw new UserError('Не выбран день');
+    if (!/^\d{1,2}:\d{2}$/.test(input.start)) throw new UserError(`Укажите, когда ${words.fellAsleep.toLowerCase()}`);
+    if (await openSleepOf(child.id)) {
+      throw new UserError(`Сон уже идёт — сначала отметьте «${words.wokeUp}» на главном экране`);
+    }
+
+    const minutes = parseTimeOfDay(input.start);
+    const startDate = minutes < window.dayBoundary ? shiftDate(input.sleepDay, 1) : input.sleepDay;
+    const startedAt = zonedTimeToUtc(startDate, minutes, window.timeZone);
+    const now = Date.now();
+    if (startedAt.getTime() > now + 60_000) throw new UserError('Это время ещё не наступило — проверьте время или день');
+    if (now - startedAt.getTime() > 20 * 3_600_000) throw new UserError('Сон идёт больше двадцати часов — проверьте время или день');
+
+    const [clash] = await db
+      .select({ startedAt: sleeps.startedAt, endedAt: sleeps.endedAt })
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), gt(sleeps.endedAt, startedAt)))
+      .limit(1);
+    if (clash?.endedAt) {
+      const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: window.timeZone });
+      throw new UserError(`Пересекается с уже записанным сном ${time.format(clash.startedAt)}–${time.format(clash.endedAt)} — проверьте время`);
+    }
+
+    await db.insert(sleeps).values({
+      childId: child.id,
+      startedAt,
+      sleepDay: sleepDayOf(startedAt, window),
+      kind: sleepKindOf(startedAt, window),
+      source: 'manual',
+    });
+    revalidatePath('/');
+    revalidatePath('/day');
   });
 }
 
@@ -168,6 +212,7 @@ export async function createChild(input: OnboardingInput) {
         healthNotes: input.healthNotes?.trim() || null,
         temperament: input.temperament,
         feedingType: input.feedingType,
+        feedingLog: input.feedingType !== 'breast',
       })
       .returning();
 
@@ -441,8 +486,8 @@ export async function revokeAccess(grantId: string) {
 export async function addFeeding(amountMl: number | null, minutesAgo = 0) {
   return guard(async () => {
     const { child, window } = await requireContext();
-    if (child.feedingType === 'breast') {
-      throw new UserError('Дневник кормления нужен только на искусственном вскармливании');
+    if (!child.feedingLog) {
+      throw new UserError('Сначала включите дневник кормлений в настройках');
     }
 
     const at = shiftBack(new Date(), minutesAgo);
@@ -614,5 +659,28 @@ export async function commitImport(input: {
     revalidatePath('/');
     revalidatePath('/day');
     return { added, lastDay, skipped };
+  });
+}
+
+/**
+ * Кормление в настройках: тип вскармливания меняется со временем (с грудного
+ * на смесь), а дневник кормлений нужен не только на смеси. Переход на смесь
+ * или смешанное включает дневник сам — выключить его можно отдельно.
+ */
+export async function setFeeding(input: { type?: 'breast' | 'formula' | 'mixed'; log?: boolean }) {
+  return guard(async () => {
+    const { child } = await requireContext();
+    const patch: { feedingType?: 'breast' | 'formula' | 'mixed'; feedingLog?: boolean } = {};
+    if (input.type) {
+      if (!['breast', 'formula', 'mixed'].includes(input.type)) throw new UserError('Неизвестный тип вскармливания');
+      patch.feedingType = input.type;
+      if (input.type !== 'breast' && child.feedingType === 'breast' && input.log === undefined) patch.feedingLog = true;
+    }
+    if (typeof input.log === 'boolean') patch.feedingLog = input.log;
+    if (Object.keys(patch).length === 0) return;
+    await db.update(children).set(patch).where(eq(children.id, child.id));
+    revalidatePath('/');
+    revalidatePath('/settings');
+    revalidatePath('/feeding');
   });
 }

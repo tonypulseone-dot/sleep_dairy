@@ -19,6 +19,8 @@ export default async function SettingsPage() {
       themePref={parent.themePref}
       childName={child.name}
       sex={child.sex}
+      feedingType={child.feedingType}
+      feedingLog={child.feedingLog}
     />
   );
 }

@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, lte } from 'drizzle-orm';
 import { db } from '@/db';
 import { sleeps } from '@/db/schema';
-import { DayView, type DayRow } from '@/components/DayView';
+import { DayView, type DayRow, type WakeView } from '@/components/DayView';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import {
   formatDuration,
+  dayStartInstant,
   durationMinutes,
   shiftDate,
   sleepDayOf,
@@ -19,7 +20,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export default async function DayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ d?: string; add?: string }>;
+  searchParams: Promise<{ d?: string; add?: string; asleep?: string }>;
 }) {
   const parent = await currentParent();
   if (!parent) return <TelegramBoot botUsername={process.env.TELEGRAM_BOT_USERNAME} />;
@@ -61,6 +62,58 @@ export default async function DayPage({
     timeZone: parent.timeZone,
   });
 
+  /*
+   * Бодрствования между снами — то, что мама и Виктория смотрят рядом со
+   * снами. Первое — от пробуждения после ночи (ночь записана во вчерашних
+   * сутках) до первого сна; последнее у сегодняшнего дня — «бодрствует
+   * сейчас», пока малыш не уснул.
+   */
+  const dayStart = dayStartInstant(sleepDay, window);
+  const anchor = rows[0]?.startedAt ?? (sleepDay === today ? now : null);
+  const [before] = anchor
+    ? await db
+        .select({ endedAt: sleeps.endedAt })
+        .from(sleeps)
+        .where(
+          and(
+            eq(sleeps.childId, child.id),
+            isNotNull(sleeps.endedAt),
+            lte(sleeps.endedAt, anchor),
+            // Не дальше полусуток до начала дня: иначе «бодрствование» растянется на пропуск в записях.
+            gte(sleeps.endedAt, new Date(dayStart.getTime() - 12 * 3_600_000)),
+          ),
+        )
+        .orderBy(desc(sleeps.endedAt))
+        .limit(1)
+    : [];
+
+  const wake = (from: Date, to: Date | null, after: number): WakeView | null => {
+    const minutes = durationMinutes(from, to ?? now, now);
+    if (minutes < 1) return null;
+    return { after, from: time.format(from), to: to ? time.format(to) : null, duration: formatDuration(minutes) };
+  };
+  const wakes: WakeView[] = [];
+  if (before?.endedAt && rows[0]) {
+    const first = wake(before.endedAt, rows[0].startedAt, -1);
+    if (first) wakes.push(first);
+  }
+  rows.forEach((row, index) => {
+    const next = rows[index + 1];
+    if (next && row.endedAt) {
+      const between = wake(row.endedAt, next.startedAt, index);
+      if (between) wakes.push(between);
+    }
+  });
+  if (sleepDay === today) {
+    const last = rows.at(-1);
+    const since = last ? last.endedAt : (before?.endedAt ?? null);
+    // Больше 16 часов «бодрствования» — это пропуск в записях, а не бодрствование.
+    if (since && (!last || last.endedAt) && now.getTime() - since.getTime() < 16 * 3_600_000) {
+      const current = wake(since, null, rows.length - 1);
+      if (current) wakes.push(current);
+    }
+  }
+
   const view: DayRow[] = rows.map((row) => ({
     id: row.id,
     kind: row.kind,
@@ -82,11 +135,14 @@ export default async function DayPage({
       today={today}
       dayBoundary={child.dayBoundaryMinutes}
       nightFrom={child.nightFromMinutes}
-      startAdding={query.add === '1'}
+      startAdding={query.add === '1' || query.asleep === '1'}
+      asleep={query.asleep === '1'}
+      nowClock={time.format(now)}
       title={title}
       prevDay={shiftDate(sleepDay, -1)}
       nextDay={sleepDay < today ? shiftDate(sleepDay, 1) : null}
       rows={view}
+      wakes={wakes}
       totals={{
         daySleep: formatDuration(totals.daySleep),
         nightSleep: formatDuration(totals.nightSleep),

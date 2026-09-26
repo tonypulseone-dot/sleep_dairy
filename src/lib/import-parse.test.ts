@@ -119,3 +119,113 @@ test('подсказка модели: дата, лента снизу ввер�
   assert.match(prompt, /время НАД блоком сна — это конец/);
   assert.match(prompt, /бодрствование, НЕ сон/);
 });
+
+/*
+ * Приложение с карточками: «Сон 18:00 - 18:46», метки «ДС: 45м 18с»
+ * (длительность), «ВБ: 2ч 23м 32с» (бодрствование перед сном); у ночи
+ * общая длительность «10ч 1м 16с» и части «ДС» и «НС».
+ */
+test('карточки с ДС/НС/ВБ и секундами', () => {
+  const result = parseRecognized(
+    JSON.stringify({
+      screen: 'list',
+      date: '2026-08-01',
+      sleeps: [
+        { date: '2026-08-01', start: '20:27', end: '06:30', duration: '10ч 1м 16с' },
+        { date: '2026-08-01', start: '18:00', end: '18:46', duration: 'ДС: 45м 18с' },
+        { date: '2026-08-01', start: '14:33', end: '15:37', duration: 'ДС: 1ч 3м 38с' },
+        { date: '2026-08-01', start: '11:40', end: '12:15', duration: '35м 32с' },
+      ],
+    }),
+    today,
+  );
+  assert.deepEqual(
+    result.sleeps.map((sleep) => `${sleep.start}–${sleep.end}${sleep.doubtful ? ' ?' : ''}`),
+    ['11:40–12:15', '14:33–15:37', '18:00–18:46', '20:27–06:30'],
+  );
+  assert.equal(parseDuration('ДС: 45м 18с'), 45);
+  assert.equal(parseDuration('10ч 1м 16с'), 601);
+});
+
+test('если нейросеть взяла у ночи только НС — строка помечается «проверьте»', () => {
+  const result = parseRecognized(
+    JSON.stringify({ screen: 'list', date: '2026-08-01', sleeps: [{ date: '2026-08-01', start: '20:27', end: '06:30', duration: 'НС: 9ч 29м 7с' }] }),
+    today,
+  );
+  assert.equal(result.sleeps[0].doubtful, true);
+});
+
+test('график-полоски по часам: снов нет, экран — график', () => {
+  const result = parseRecognized('{"screen": "chart", "date": null, "times_visible": false, "sleeps": []}', today);
+  assert.equal(result.screen, 'chart');
+  assert.equal(result.timesVisible, false);
+});
+
+test('подсказка модели: ДС/НС/ВБ и графики', () => {
+  const prompt = screenshotPrompt(today);
+  assert.match(prompt, /ДС \(дневной сон\), НС \(ночной сон\), ВБ \(бодрствование\)/);
+  assert.match(prompt, /НЕ оценивай время по положению полосок/);
+});
+
+/*
+ * PDF-выгрузка Baby Soma: группы по датам, внутри — по возрастанию, ночь
+ * первой («Ночной сон 20:49 - 05:51 … 9 ч 2 м»): это ночь, закончившаяся
+ * утром даты группы.
+ */
+test('Baby Soma: ночь перед утренними снами начиналась накануне', () => {
+  const result = parseRecognized(
+    JSON.stringify({
+      screen: 'list',
+      date: null,
+      sleeps: [
+        { date: '2026-08-08', start: '20:49', end: '05:51', duration: '9 ч 2 м' },
+        { date: '2026-08-08', start: '07:32', end: '09:41', duration: '2 ч 9 м' },
+        { date: '2026-08-08', start: '12:13', end: '12:43', duration: '0 ч 30 м' },
+        { date: '2026-08-08', start: '15:05', end: '15:45', duration: '0 ч 40 м' },
+        { date: '2026-08-07', start: '20:35', end: '07:36', duration: '11 ч 0 м' },
+        { date: '2026-08-07', start: '09:25', end: '10:49', duration: '1 ч 24 м' },
+        { date: '2026-08-07', start: '13:13', end: '14:13', duration: '1 ч 0 м' },
+        { date: '2026-08-07', start: '16:44', end: '17:34', duration: '0 ч 50 м' },
+      ],
+    }),
+    today,
+  );
+  const nights = result.sleeps.filter((sleep) => sleep.start > sleep.end);
+  assert.deepEqual(nights.map((night) => `${night.date} ${night.start}`), ['2026-08-06 20:35', '2026-08-07 20:49']);
+  assert.equal(result.sleeps.filter((sleep) => sleep.doubtful).length, 0);
+});
+
+test('карточки «от новых к старым»: ночь сверху группы 03.08 началась 3-го', () => {
+  const result = parseRecognized(
+    JSON.stringify({
+      screen: 'list',
+      date: '2026-08-03',
+      sleeps: [
+        { date: '2026-08-03', start: '20:20', end: '05:41', duration: '9ч 21м 4с' },
+        { date: '2026-08-03', start: '18:18', end: '18:56', duration: 'ДС: 36м 20с' },
+        { date: '2026-08-03', start: '15:07', end: '15:50', duration: 'ДС: 43м 26с' },
+        { date: '2026-08-03', start: '11:15', end: '12:34', duration: 'ДС: 1ч 18м 15с' },
+        { date: '2026-08-03', start: '08:19', end: '09:02', duration: 'ДС: 43м 57с' },
+      ],
+    }),
+    today,
+  );
+  assert.equal(result.sleeps.find((sleep) => sleep.start === '20:20')?.date, '2026-08-03');
+  assert.equal(result.sleeps.filter((sleep) => sleep.doubtful).length, 0);
+});
+
+test('если нейросеть сама поставила ночи Baby Soma вчерашнюю дату — второй раз не сдвигаем', () => {
+  const result = parseRecognized(
+    JSON.stringify({
+      screen: 'list',
+      date: null,
+      sleeps: [
+        { date: '2026-08-07', start: '20:49', end: '05:51', duration: '9 ч 2 м' },
+        { date: '2026-08-08', start: '07:32', end: '09:41', duration: '2 ч 9 м' },
+        { date: '2026-08-08', start: '12:13', end: '12:43', duration: '0 ч 30 м' },
+      ],
+    }),
+    today,
+  );
+  assert.equal(result.sleeps.find((sleep) => sleep.start === '20:49')?.date, '2026-08-07');
+});

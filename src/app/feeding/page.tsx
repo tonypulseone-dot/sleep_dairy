@@ -13,8 +13,8 @@ export default async function FeedingPage() {
 
   const child = await currentChild(parent.id);
   if (!child) redirect('/onboarding');
-  // На грудном вскармливании этого экрана нет вовсе — так просила Виктория.
-  if (child.feedingType === 'breast') redirect('/');
+  // Экран открыт, только если мама включила дневник кормлений (на смеси — сам).
+  if (!child.feedingLog) redirect('/settings#feeding');
 
   const window: DayWindow = {
     dayBoundary: child.dayBoundaryMinutes,

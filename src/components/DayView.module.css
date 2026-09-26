@@ -64,7 +64,26 @@
 }
 .totalLabel { font-size: 11.5px; color: var(--ink-3); }
 
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.list > li { display: flex; flex-direction: column; }
+
+/* Бодрствование между снами: пунктир слева, время и длительность — спокойным текстом. */
+.wake {
+  display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px;
+  min-height: 44px; padding: 2px 16px 2px 14px;
+  color: var(--ink-2);
+}
+.wakeLine {
+  justify-self: center; align-self: stretch; width: 0;
+  border-left: 2px dashed var(--wake);
+  opacity: .55;
+}
+.wakeText { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.wakeLabel { font-size: 13px; }
+.wakeSpan { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.wakeDuration { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.wakeNow .wakeLine { opacity: 1; }
+.wakeNow .wakeLabel { color: var(--ink); font-weight: 600; }
 
 /* Строка сна: цвет — от Виктории, значок — чтобы тип читался и без цвета. */
 .row {
@@ -106,6 +125,15 @@
 }
 
 .times { display: flex; gap: 10px; }
+.ongoing {
+  display: flex; align-items: flex-start; gap: 10px; min-height: 44px;
+  padding: 10px 12px; border-radius: 12px; background: var(--night-soft); color: var(--night-ink);
+  cursor: pointer;
+}
+.ongoing input { flex: none; margin-top: 1px; }
+.ongoing span { display: flex; flex-direction: column; gap: 2px; }
+.ongoing b { font-size: 15px; }
+.ongoing small { font-size: 12.5px; line-height: 1.35; opacity: .9; }
 .timeField { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .timeField span { font-size: 12.5px; color: var(--ink-3); }
 

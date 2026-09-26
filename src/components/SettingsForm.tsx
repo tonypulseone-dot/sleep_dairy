@@ -4,14 +4,14 @@ import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteEverything, setChildSex, setThemePref, updateDayWindow } from '@/app/actions';
+import { deleteEverything, setChildSex, setFeeding, setThemePref, updateDayWindow } from '@/app/actions';
 import type { ChildSex } from '@/lib/words';
 import { applyTheme } from '@/lib/telegram-client';
 import { resolveTheme, type ThemePref } from '@/lib/theme';
 import { parseTimeOfDay } from '@/lib/sleep-day';
 import styles from './SettingsForm.module.css';
 import { BackButton } from './BackButton';
-import { IconHeart, IconMoon, IconShield, IconSun, IconUser } from './Icons';
+import { IconBottle, IconHeart, IconMoon, IconShield, IconSun, IconUser } from './Icons';
 
 /** Зоны, в которых реально живут мамы. Своя подставится автоматически. */
 const ZONES = [
@@ -45,6 +45,8 @@ interface Props {
   themePref: 'auto' | 'light' | 'dark';
   childName: string;
   sex: ChildSex | null;
+  feedingType: 'breast' | 'formula' | 'mixed';
+  feedingLog: boolean;
 }
 
 export function SettingsForm(props: Props) {
@@ -70,6 +72,26 @@ export function SettingsForm(props: Props) {
     startTransition(async () => {
       try {
         unwrap(await setChildSex(value));
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
+      }
+    });
+  };
+
+  const [feedingType, setFeedingType] = useState(props.feedingType);
+  const [feedingLog, setFeedingLog] = useState(props.feedingLog);
+
+  // Сохраняем сразу, как тему: переключатель, который надо ещё «сохранить», сбивает.
+  const saveFeeding = (input: { type?: 'breast' | 'formula' | 'mixed'; log?: boolean }) => {
+    if (input.type) {
+      setFeedingType(input.type);
+      if (input.type !== 'breast' && feedingType === 'breast') setFeedingLog(true);
+    }
+    if (typeof input.log === 'boolean') setFeedingLog(input.log);
+    startTransition(async () => {
+      try {
+        unwrap(await setFeeding(input));
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
@@ -182,6 +204,43 @@ export function SettingsForm(props: Props) {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className={styles.block} id="feeding">
+        <h2 className={styles.title}><span className={`${styles.badge} ${styles.badgeFeeding}`}><IconBottle size={16} /></span>Кормление</h2>
+        <p className={styles.hint}>Если вскармливание поменялось — отметьте: консультант увидит это в карточке.</p>
+        <div className={styles.chips}>
+          {(
+            [
+              ['breast', 'Грудное'],
+              ['mixed', 'Смешанное'],
+              ['formula', 'Искусственное'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={feedingType === value}
+              onClick={() => saveFeeding({ type: value })}
+              className={`${styles.chip} ${feedingType === value ? styles.chipOn : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className={styles.switchRow}>
+          <span className={styles.switchText}>
+            <b>Дневник кормлений</b>
+            <small>Отмечать время и объём — например, если докармливаете смесью. Кнопка «Кормления» появится на главной.</small>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className={styles.switch}
+            checked={feedingLog}
+            onChange={(event) => saveFeeding({ log: event.target.checked })}
+          />
+        </label>
       </section>
 
       <section className={styles.block}>

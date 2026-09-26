@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconBottle, IconImport, IconSettings, IconToy } from '@/components/Icons';
+import { IconBottle, IconForward, IconImport, IconSettings, IconToy } from '@/components/Icons';
 import { gigachatConfigured } from '@/lib/gigachat';
+import { childWords } from '@/lib/words';
 import { SexPrompt } from '@/components/SexPrompt';
 import { defaultConsultant } from '@/lib/default-consultant';
 import { SleepToggle } from '@/components/SleepToggle';
@@ -201,6 +202,16 @@ export default async function Home() {
         />
       </div>
 
+      {/*
+        Малыш уснул час назад, а мама вспомнила только сейчас: «5/10/15 мин»
+        так далеко не достают. Ведём сразу в форму с «Ещё спит».
+      */}
+      {!open && (
+        <Link href="/day?add=1&asleep=1" className={styles.earlier}>
+          {childWords(child.sex).fellAsleep} раньше? Укажите время
+        </Link>
+      )}
+
       {/* Забыла нажать вовремя или вносит вчерашний день — отдельная заметная кнопка. */}
       <Link href="/day?add=1" className={styles.manual}>
         <span className={styles.manualPlus} aria-hidden="true">+</span>
@@ -255,6 +266,10 @@ export default async function Home() {
                 {totals.nightSleep > 0 && <i className={styles.splitNight} style={{ flexGrow: totals.nightSleep }} />}
               </div>
             )}
+            {/* Карточка ведёт в день — пусть это будет видно, а не угадывается. */}
+            <span className={styles.more}>
+              Сны и бодрствования за день <IconForward size={16} />
+            </span>
           </>
         ) : (
           <span className={styles.empty}>Записей пока нет — открыть дневник</span>
@@ -262,7 +277,7 @@ export default async function Home() {
       </Link>
 
       <nav className={styles.tiles} aria-label="Разделы">
-        {child.feedingType !== 'breast' && (
+        {child.feedingLog && (
           <Link href="/feeding" className={`${styles.tile} ${styles.tileFeeding}`}>
             <span className={styles.tileIcon} aria-hidden="true">
               <IconBottle />

@@ -1,10 +1,10 @@
 'use client';
 
 import { unwrap } from '@/lib/action-result';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addSleepManual, deleteSleep, updateSleep } from '@/app/actions';
+import { addSleepManual, deleteSleep, startSleepAt, updateSleep } from '@/app/actions';
 import styles from './DayView.module.css';
 import { IconBack, IconCalendar, IconForward, IconMoon } from './Icons';
 import { childWords, type ChildSex } from '@/lib/words';
@@ -15,6 +15,15 @@ export interface DayRow {
   kind: 'day' | 'night';
   start: string;
   end: string | null;
+  duration: string;
+}
+
+/** Бодрствование между снами. `after` — индекс сна, после которого оно идёт (−1 — до первого). */
+export interface WakeView {
+  after: number;
+  from: string;
+  /** null — идёт сейчас. */
+  to: string | null;
   duration: string;
 }
 
@@ -34,10 +43,15 @@ interface Props {
   nightFrom: number;
   /** Пришли с главной по кнопке «Внести сон вручную» — форма сразу открыта. */
   startAdding?: boolean;
+  /** Пришли по «Уснула раньше?» — форма сразу в режиме «Ещё спит». */
+  asleep?: boolean;
+  /** Сейчас по часам мамы, «15:40» — от него считаем время по умолчанию. */
+  nowClock: string;
   title: string;
   prevDay: string;
   nextDay: string | null;
   rows: DayRow[];
+  wakes: WakeView[];
   totals: DayTotalsView;
   sex: ChildSex | null;
 }
@@ -68,12 +82,35 @@ function KindMark({ kind }: { kind: 'day' | 'night' }) {
   );
 }
 
+/**
+ * Бодрствование между снами — тонкой строкой с пунктиром, чтобы день
+ * читался как чередование: сон — бодрствование — сон.
+ */
+function WakeLine({ wake, first = false }: { wake: WakeView; first?: boolean }) {
+  return (
+    <div className={`${styles.wake} ${wake.to === null ? styles.wakeNow : ''}`}>
+      <span className={styles.wakeLine} aria-hidden="true" />
+      <span className={styles.wakeText}>
+        <span className={styles.wakeLabel}>
+          {wake.to === null ? 'Бодрствует сейчас' : first ? 'Бодрствование с утра' : 'Бодрствование'}
+        </span>
+        <span className={styles.wakeSpan}>
+          {wake.from}–{wake.to ?? 'сейчас'}
+        </span>
+      </span>
+      <span className={styles.wakeDuration}>{wake.duration}</span>
+    </div>
+  );
+}
+
 interface Draft {
   id: string | null;
   /** Сонные сутки, к которым относится сон. */
   day: string;
   start: string;
   end: string;
+  /** Сон ещё идёт: только начало, конец отметят кнопкой «Проснулась». */
+  ongoing?: boolean;
 }
 
 function shiftDay(date: string, days: number): string {
@@ -107,7 +144,7 @@ function nightLabel(date: string): string {
  * (composeSleep): время до утренней границы — уже следующее число, конец
  * не позже начала — следующие сутки.
  */
-function placeSleep(draft: Draft, dayBoundary: number) {
+function placeSleep(draft: Draft, dayBoundary: number, now: Date | null) {
   const from = toMinutes(draft.start);
   const to = toMinutes(draft.end);
   if (from === null || to === null) return null;
@@ -115,12 +152,33 @@ function placeSleep(draft: Draft, dayBoundary: number) {
   const endDate = to <= from ? shiftDay(startDate, 1) : startDate;
   const nextMorning = shiftDay(draft.day, 1);
   const pad = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-  const now = new Date();
+  // Без «сейчас» (первая отрисовка на сервере) о будущем не судим: у сервера
+  // другой часовой пояс, и текст разошёлся бы с тем, что покажет телефон.
+  if (!now) {
+    return { throughMorning: draft.ongoing ? false : endDate > nextMorning || (endDate === nextMorning && to > dayBoundary), inFuture: false, sinceNow: null };
+  }
   const local = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${pad(now.getHours() * 60 + now.getMinutes())}`;
+  if (draft.ongoing) {
+    return { throughMorning: false, inFuture: `${startDate}T${pad(from)}` > local, sinceNow: minutesSince(startDate, from, now) };
+  }
   return {
     throughMorning: endDate > nextMorning || (endDate === nextMorning && to > dayBoundary),
     inFuture: `${endDate}T${pad(to)}` > local,
+    sinceNow: null,
   };
+}
+
+/** Сколько минут прошло от «date + minutes» по часам телефона до сейчас. */
+function minutesSince(date: string, minutes: number, now: Date): number {
+  const [year, month, day] = date.split('-').map(Number);
+  const at = new Date(year, month - 1, day, Math.floor(minutes / 60), minutes % 60);
+  return Math.round((now.getTime() - at.getTime()) / 60_000);
+}
+
+function durationText(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours === 0 ? `${rest} мин` : rest === 0 ? `${hours} ч` : `${hours} ч ${rest} мин`;
 }
 
 /** «1 ч 30 мин» — длительность между двумя «14:00», через полночь тоже. */
@@ -140,18 +198,29 @@ export function DayView({
   dayBoundary,
   nightFrom,
   startAdding = false,
+  asleep = false,
+  nowClock,
   title,
   prevDay,
   nextDay,
   rows,
+  wakes,
   totals,
   sex,
 }: Props) {
   const words = childWords(sex);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const blank = (): Draft => ({ id: null, day: sleepDay, start: '13:00', end: '14:30' });
-  const [draft, setDraft] = useState<Draft | null>(startAdding ? blank : null);
+  // «Ещё спит» по умолчанию — полчаса назад: чаще всего мама вспоминает примерно тогда.
+  const halfHourAgo = (() => {
+    const minutes = ((toMinutes(nowClock) ?? 0) - 30 + 1440) % 1440;
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  })();
+  const blank = (ongoing = false): Draft =>
+    ongoing
+      ? { id: null, day: sleepDay, start: halfHourAgo, end: nowClock, ongoing: true }
+      : { id: null, day: sleepDay, start: '13:00', end: '14:30' };
+  const [draft, setDraft] = useState<Draft | null>(startAdding ? () => blank(asleep) : null);
   const [error, setError] = useState<string | null>(null);
 
   const run = (job: () => Promise<void>, goTo?: string) => {
@@ -160,8 +229,9 @@ export function DayView({
       try {
         await job();
         setDraft(null);
-        // Сон за другой день — показываем тот день, чтобы мама увидела запись.
-        if (goTo) router.replace(`/day?d=${goTo}`);
+        // Сон за другой день — показываем тот день, чтобы мама увидела запись;
+        // идущий сон — на главную, к кнопке «Проснулась».
+        if (goTo) router.replace(goTo);
         router.refresh();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Не получилось сохранить');
@@ -171,13 +241,17 @@ export function DayView({
 
   const save = () => {
     if (!draft) return;
+    if (draft.ongoing && !draft.id) {
+      run(async () => unwrap(await startSleepAt({ sleepDay: draft.day, start: draft.start })), '/');
+      return;
+    }
     run(
       async () => {
         const input = { sleepDay: draft.day, start: draft.start, end: draft.end };
         if (draft.id) unwrap(await updateSleep(draft.id, input));
         else unwrap(await addSleepManual(input));
       },
-      draft.day !== sleepDay || startAdding ? draft.day : undefined,
+      draft.day !== sleepDay || startAdding ? `/day?d=${draft.day}` : undefined,
     );
   };
 
@@ -243,7 +317,10 @@ export function DayView({
 
       <ul className={styles.list}>
 
-        {rows.map((row) => (
+        {wakes.filter((item) => item.after === -1).map((item) => (
+          <WakeLine key="wake-first" wake={item} first />
+        ))}
+        {rows.map((row, index) => (
           <li key={row.id}>
             <button
               type="button"
@@ -279,6 +356,11 @@ export function DayView({
                 onDelete={() => run(async () => unwrap(await deleteSleep(row.id)))}
               />
             )}
+            {wakes
+              .filter((item) => item.after === index)
+              .map((item) => (
+                <WakeLine key={`wake-${index}`} wake={item} />
+              ))}
           </li>
         ))}
       </ul>
@@ -333,8 +415,19 @@ function Editor({
   onCancel: () => void;
   onDelete?: () => void;
 }) {
-  const span = spanText(draft.start, draft.end);
-  const placed = placeSleep(draft, window.dayBoundary);
+  const span = draft.ongoing ? null : spanText(draft.start, draft.end);
+  // «Сейчас» — только на телефоне и после отрисовки; раз в полминуты обновляем.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const first = setTimeout(tick, 0);
+    const timer = setInterval(tick, 30_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, []);
+  const placed = placeSleep(draft, window.dayBoundary, now);
   const startMinutes = toMinutes(draft.start);
   // То же правило, что на сервере (sleepKindOf): уснул «ночью» — или проспал
   // за утреннюю границу — значит, ночной.
@@ -351,7 +444,7 @@ function Editor({
   const yesterday = days ? shiftDay(days.today, -1) : null;
   const inFuture = placed?.inFuture ?? false;
   const lastNight =
-    days && yesterday && inFuture && night && draft.day === days.today && !placeSleep({ ...draft, day: yesterday }, window.dayBoundary)?.inFuture
+    days && yesterday && inFuture && night && !draft.ongoing && draft.day === days.today && !placeSleep({ ...draft, day: yesterday }, window.dayBoundary, now)?.inFuture
       ? yesterday
       : null;
 
@@ -411,6 +504,20 @@ function Editor({
         </div>
       )}
 
+      {days && (
+        <label className={styles.ongoing}>
+          <input
+            type="checkbox"
+            checked={Boolean(draft.ongoing)}
+            onChange={(event) => onChange({ ...draft, ongoing: event.target.checked })}
+          />
+          <span>
+            <b>Ещё спит</b>
+            <small>указать только, когда {words.fellAsleep.toLowerCase()}, — конец отметите кнопкой «{words.wokeUp}»</small>
+          </span>
+        </label>
+      )}
+
       <div className={styles.times}>
         <label className={styles.timeField}>
           <span>{words.fellAsleep}</span>
@@ -420,15 +527,24 @@ function Editor({
             onChange={(event) => onChange({ ...draft, start: event.target.value })}
           />
         </label>
-        <label className={styles.timeField}>
-          <span>{words.wokeUp}</span>
-          <input
-            type="time"
-            value={draft.end}
-            onChange={(event) => onChange({ ...draft, end: event.target.value })}
-          />
-        </label>
+        {!draft.ongoing && (
+          <label className={styles.timeField}>
+            <span>{words.wokeUp}</span>
+            <input
+              type="time"
+              value={draft.end}
+              onChange={(event) => onChange({ ...draft, end: event.target.value })}
+            />
+          </label>
+        )}
       </div>
+
+      {draft.ongoing && placed && !placed.inFuture && placed.sinceNow !== null && (
+        <p className={styles.preview}>
+          <KindMark kind={night ? 'night' : 'day'} />
+          Сон идёт с {draft.start} · <b>уже {durationText(Math.max(placed.sinceNow, 0))}</b>
+        </p>
+      )}
 
       {span && placed && (
         <p className={styles.preview}>
@@ -438,7 +554,16 @@ function Editor({
         </p>
       )}
 
-      {inFuture && (
+      {inFuture && draft.ongoing && (
+        <div className={styles.warn} role="status">
+          <span>
+            {words.fellAsleep} в {draft.start} — это время ещё не наступило. Проверьте время или выберите
+            «Вчера», если малыш уснул до полуночи.
+          </span>
+        </div>
+      )}
+
+      {inFuture && !draft.ongoing && (
         <div className={styles.warn} role="status">
           {lastNight ? (
             <>

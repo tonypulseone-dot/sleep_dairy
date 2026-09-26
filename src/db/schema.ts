@@ -123,6 +123,12 @@ export const children = pgTable(
     temperament: jsonb('temperament').$type<string[]>(),
 
     feedingType: feedingType('feeding_type').notNull().default('breast'),
+    /**
+     * Дневник кормлений (объём и время). Включается сам на смеси, но нужен
+     * и на грудном — например, когда мама начала докармливать. Поэтому это
+     * отдельный переключатель, а не вывод из типа вскармливания.
+     */
+    feedingLog: boolean('feeding_log').notNull().default(false),
 
     /* Границы сонных суток — мама выставляет сама. Минуты от полуночи. */
     dayBoundaryMinutes: smallint('day_boundary_minutes').notNull().default(360),

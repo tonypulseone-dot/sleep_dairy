@@ -35,6 +35,8 @@ export interface TimelineDay {
   isToday: boolean;
   segments: TimelineSegment[];
   wakeWindows: string[];
+  /** Бодрствование от пробуждения после ночи до первого сна дня. */
+  morningWake: string | null;
   total: string;
   day: string;
   night: string;
@@ -178,6 +180,13 @@ export function SleepTimeline({
                   Между снами — бодрствование, в том же порядке, что на шкале. */}
               {day.segments.length > 0 && (
                 <ol className={styles.log} aria-label="Сны и бодрствования по порядку">
+                  {day.morningWake && (
+                    <li className={styles.logItem}>
+                      <span className={styles.logWake} title="бодрствование с утра, после ночи">
+                        <span aria-hidden="true">↔</span> {day.morningWake}
+                      </span>
+                    </li>
+                  )}
                   {day.segments.map((segment, index) => (
                     <li key={index} className={styles.logItem}>
                       {index > 0 && day.wakeWindows[index - 1] && (
