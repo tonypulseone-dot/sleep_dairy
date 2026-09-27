@@ -12,14 +12,15 @@ import { SleepToggle } from '@/components/SleepToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
+import { todayOf } from '@/lib/today';
 import { ageInMonths, ownNapLength, ownNightLength, rhythmHint } from '@/lib/rhythm';
 import { resolveTheme } from '@/lib/theme';
 import {
   daySegments,
   dayStartInstant,
   formatDuration,
+  openingNight,
   shiftDate,
-  sleepDayOf,
   sleepKindOf,
   summarizeDay,
   type DayWindow,
@@ -48,7 +49,7 @@ export default async function Home() {
   };
 
   const now = new Date();
-  const today = sleepDayOf(now, window);
+  const today = await todayOf(child.id, window, now);
   const weekAgo = shiftDate(today, -6);
 
   const [weekRows, openRows, endedRows, norms] = await Promise.all([
@@ -75,20 +76,24 @@ export default async function Home() {
   const open = openRows[0] ?? null;
   const todayRows = weekRows.filter((row) => row.sleepDay === today);
   const records = todayRows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt }));
-  const totals = summarizeDay(today, records, window, now);
-  const segments = daySegments(today, records, window, now);
+  const recordsOf = (sleepDay: string) =>
+    weekRows
+      .filter((row) => row.sleepDay === sleepDay)
+      .map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt }));
+  const totals = summarizeDay(today, records, window, now, openingNight(recordsOf(shiftDate(today, 1)), window));
+  // Кольцо — по часам, а не по суткам дневника: ночь, в которую малыш ушёл
+  // вечером, уже в следующих сутках, но на кольце сегодняшнего вечера она нужна.
+  const segments = daySegments(
+    today,
+    weekRows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
+    window,
+    now,
+  );
 
   // Ориентир: сперва ритм самого ребёнка, и только пока его нет — её таблица.
   const weekDays = Array.from({ length: 7 }, (_, offset) => {
     const sleepDay = shiftDate(today, -offset);
-    return summarizeDay(
-      sleepDay,
-      weekRows
-        .filter((row) => row.sleepDay === sleepDay)
-        .map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
-      window,
-      now,
-    );
+    return summarizeDay(sleepDay, recordsOf(sleepDay), window, now, openingNight(recordsOf(shiftDate(sleepDay, 1)), window));
   });
 
   const hint = child.showRhythmHint

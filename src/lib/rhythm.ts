@@ -68,9 +68,12 @@ export function typicalNapCount(days: DayTotals[]): number | null {
   return counts[Math.floor(counts.length / 2)];
 }
 
-/** Среднее окно бодрствования ребёнка. Последнее за день не берём — это отбой. */
+/**
+ * Среднее окно бодрствования ребёнка: с утра и между дневными снами.
+ * Бодрствование перед ночью (eveningWake) не берём — это отбой.
+ */
 export function ownWakeWindow(days: DayTotals[]): number | null {
-  const windows = days.flatMap((day) => day.wakeWindows.slice(0, -1));
+  const windows = days.flatMap((day) => day.wakeWindows);
   if (windows.length < 3) return null;
   return Math.round(windows.reduce((sum, value) => sum + value, 0) / windows.length);
 }

@@ -18,7 +18,7 @@ import {
   shiftDate,
   sleepDayOf,
   summarizeDay,
-  lastEndBefore,
+  openingNight,
   type DayTotals,
   type DayWindow,
 } from '@/lib/sleep-day';
@@ -26,6 +26,8 @@ import { childWords } from '@/lib/words';
 import styles from '@/components/Pro.module.css';
 
 const PERIODS = [5, 7, 10, 14] as const;
+/** Шкала суток начинается за 12 часов до утренней границы: с 18:00 при утре в 06:00. */
+const AXIS_BEFORE_MORNING = 12 * 60;
 
 export default async function ClientCard({
   params,
@@ -80,8 +82,8 @@ export default async function ClientCard({
   const rows = await db
     .select()
     .from(sleeps)
-    // С запасом в сутки: ночь накануне нужна, чтобы посчитать бодрствование с утра.
-    .where(and(eq(sleeps.childId, childId), gte(sleeps.sleepDay, shiftDate(from, -1))))
+    // Без верхней границы: ночь следующих суток нужна для бодрствования перед ней.
+    .where(and(eq(sleeps.childId, childId), gte(sleeps.sleepDay, from)))
     .orderBy(asc(sleeps.startedAt));
 
   const byDay = new Map<string, { startedAt: Date; endedAt: Date | null }[]>();
@@ -94,25 +96,29 @@ export default async function ClientCard({
   const days: DayTotals[] = [];
   for (let offset = 0; offset < period; offset += 1) {
     const sleepDay = shiftDate(today, -offset);
-    const records = byDay.get(sleepDay) ?? [];
-    // Утреннее бодрствование идёт в итог дня — от пробуждения после вчерашней ночи.
-    const nightEnd = records[0] ? lastEndBefore(rows, records[0].startedAt, sleepDay, window) : null;
-    days.push(summarizeDay(sleepDay, records, window, now, nightEnd));
+    // Сутки заканчиваются уходом в следующую ночь — она открывает следующие сутки.
+    const nextNight = openingNight(byDay.get(shiftDate(sleepDay, 1)) ?? [], window);
+    days.push(summarizeDay(sleepDay, byDay.get(sleepDay) ?? [], window, now, nextNight));
   }
 
   // Сегодняшний день ещё не закончился: включать его в среднее — занижать цифру.
   const completed = days.filter((day) => day.sleepDay !== today && day.totalSleep > 0);
   const average = averageTotalSleep(completed);
 
-  // Шкала по дням: сны отрезками от утренней границы, свежий день сверху.
+  /*
+   * Шкала по дням, свежий день сверху. Сутки по Виктории начинаются с ночи,
+   * поэтому шкала идёт с вечера накануне (за 12 часов до утренней границы):
+   * слева ночь, дальше день и бодрствование до следующей ночи.
+   */
   const byDayRows = new Map<string, typeof rows>();
   for (const row of rows) byDayRows.set(row.sleepDay, [...(byDayRows.get(row.sleepDay) ?? []), row]);
   const clock = (at: Date) => formatTimeOfDay(localMinutes(at, window.timeZone));
   const timelineLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const timeline: TimelineDay[] = days.map((day) => {
-    const start = dayStartInstant(day.sleepDay, window).getTime();
+    const start = dayStartInstant(day.sleepDay, window).getTime() - AXIS_BEFORE_MORNING * 60000;
     const minutesFrom = (at: Date) => (at.getTime() - start) / 60000;
-    const segments = (byDayRows.get(day.sleepDay) ?? []).map((row) => {
+    const dayRows = byDayRows.get(day.sleepDay) ?? [];
+    const segments = dayRows.map((row) => {
       const end = row.endedAt ?? now;
       const from = Math.max(0, Math.min(1440, minutesFrom(row.startedAt)));
       return {
@@ -125,6 +131,15 @@ export default async function ClientCard({
         duration: formatDuration(durationMinutes(row.startedAt, end)),
       };
     });
+    // Бодрствование перед каждым сном; между кусками одной ночи — ночное пробуждение.
+    const wakes = dayRows.map((row, index) => {
+      const previous = dayRows[index - 1];
+      if (!previous?.endedAt) return null;
+      const minutes = durationMinutes(previous.endedAt, row.startedAt);
+      if (minutes < 1) return null;
+      return { text: formatDuration(minutes), night: previous.kind === 'night' && row.kind === 'night' };
+    });
+    const nextNight = openingNight(byDay.get(shiftDate(day.sleepDay, 1)) ?? [], window);
     const complete = day.sleepDay !== today && day.totalSleep > 0;
     const diff = average === null || !complete ? 0 : day.totalSleep - average;
     const nowAt = day.sleepDay === today ? Math.round(minutesFrom(now)) : null;
@@ -133,8 +148,11 @@ export default async function ClientCard({
       label: timelineLabel.format(new Date(`${day.sleepDay}T12:00:00Z`)),
       isToday: day.sleepDay === today,
       segments,
-      wakeWindows: day.wakeWindows.map(formatDuration),
-      morningWake: day.morningWake === null ? null : formatDuration(day.morningWake),
+      wakes,
+      evening:
+        day.eveningWake !== null && nextNight
+          ? { wake: formatDuration(day.eveningWake), night: clock(nextNight) }
+          : null,
       total: formatDuration(day.totalSleep),
       day: formatDuration(day.daySleep),
       night: formatDuration(day.nightSleep),
@@ -272,8 +290,8 @@ export default async function ClientCard({
 
       <SleepTimeline
         days={timeline}
-        dayBoundary={child.dayBoundaryMinutes}
-        hint="Каждая строка — сутки от утренней границы. Под шкалой — время каждого сна и бодрствования (↔): первое — с утра, после ночи, дальше — между снами. Справа — итоги и отклонение от среднего (▲▼)."
+        axisFrom={(child.dayBoundaryMinutes - AXIS_BEFORE_MORNING + 1440) % 1440}
+        hint="Каждая строка — сутки: ночь (с вечера накануне) и день после неё, до ухода в следующую ночь. Под шкалой — время каждого сна и бодрствования (↔): после ночи — с утра, дальше — между снами и перед ночью (→ ночь). Справа — итоги и отклонение от среднего (▲▼)."
       />
 
       <div className={styles.average}>

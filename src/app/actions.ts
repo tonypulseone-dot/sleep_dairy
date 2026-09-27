@@ -24,6 +24,8 @@ import {
   shiftDate,
   zonedTimeToUtc,
   parseTimeOfDay,
+  latestAt,
+  sleepDayFor,
   sleepDayOf,
   sleepKindOf,
   type DayWindow,
@@ -86,7 +88,7 @@ export async function startSleep(minutesAgo = 0) {
     await db.insert(sleeps).values({
       childId: child.id,
       startedAt,
-      sleepDay: sleepDayOf(startedAt, window),
+      sleepDay: sleepDayFor(startedAt, window),
       kind: sleepKindOf(startedAt, window),
       source: 'timer',
     });
@@ -99,22 +101,18 @@ export async function startSleep(minutesAgo = 0) {
  * Кнопки «5/10/15 мин назад» так далеко не достают — время указывают руками,
  * а конец отметят кнопкой «Проснулась», как обычно.
  */
-export async function startSleepAt(input: { sleepDay: string; start: string }) {
+export async function startSleepAt(input: { start: string }) {
   return guard(async () => {
     const { child, window } = await requireContext();
     const words = childWords(child.sex);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sleepDay)) throw new UserError('Не выбран день');
     if (!/^\d{1,2}:\d{2}$/.test(input.start)) throw new UserError(`Укажите, когда ${words.fellAsleep.toLowerCase()}`);
     if (await openSleepOf(child.id)) {
       throw new UserError(`Сон уже идёт — сначала отметьте «${words.wokeUp}» на главном экране`);
     }
 
-    const minutes = parseTimeOfDay(input.start);
-    const startDate = minutes < window.dayBoundary ? shiftDate(input.sleepDay, 1) : input.sleepDay;
-    const startedAt = zonedTimeToUtc(startDate, minutes, window.timeZone);
-    const now = Date.now();
-    if (startedAt.getTime() > now + 60_000) throw new UserError('Это время ещё не наступило — проверьте время или день');
-    if (now - startedAt.getTime() > 20 * 3_600_000) throw new UserError('Сон идёт больше двадцати часов — проверьте время или день');
+    // Сон идёт сейчас — значит, начался в последний раз, когда на часах было это время.
+    const startedAt = latestAt(parseTimeOfDay(input.start), window);
+    if (Date.now() - startedAt.getTime() > 20 * 3_600_000) throw new UserError('Сон идёт больше двадцати часов — проверьте время');
 
     const [clash] = await db
       .select({ startedAt: sleeps.startedAt, endedAt: sleeps.endedAt })
@@ -129,7 +127,7 @@ export async function startSleepAt(input: { sleepDay: string; start: string }) {
     await db.insert(sleeps).values({
       childId: child.id,
       startedAt,
-      sleepDay: sleepDayOf(startedAt, window),
+      sleepDay: sleepDayFor(startedAt, window),
       kind: sleepKindOf(startedAt, window),
       source: 'manual',
     });
@@ -171,7 +169,13 @@ export async function stopSleep(minutesAgo = 0) {
     await db
       .update(sleeps)
       // Тип уточняем по концу: уложили до «ночи», а проспал до утра — это ночь.
-      .set({ endedAt, kind: sleepKindOf(open.startedAt, window, endedAt), updatedAt: now })
+      // А с типом могут смениться и сутки: ночь относится к утру, в которое закончилась.
+      .set({
+        endedAt,
+        kind: sleepKindOf(open.startedAt, window, endedAt),
+        sleepDay: sleepDayFor(open.startedAt, window, endedAt),
+        updatedAt: now,
+      })
       .where(eq(sleeps.id, open.id));
     revalidatePath('/');
   });
@@ -274,7 +278,7 @@ function build(input: SleepInput, window: DayWindow) {
   return {
     startedAt,
     endedAt,
-    sleepDay: sleepDayOf(startedAt, window),
+    sleepDay: sleepDayFor(startedAt, window, endedAt),
     kind: sleepKindOf(startedAt, window, endedAt),
   };
 }
@@ -400,7 +404,7 @@ export async function updateDayWindow(input: {
 async function recomputeSleepDays(childId: string, window: DayWindow) {
   const rows = await db.select().from(sleeps).where(eq(sleeps.childId, childId));
   for (const row of rows) {
-    const sleepDay = sleepDayOf(row.startedAt, window);
+    const sleepDay = sleepDayFor(row.startedAt, window, row.endedAt);
     const kind = sleepKindOf(row.startedAt, window, row.endedAt);
     if (sleepDay !== row.sleepDay || kind !== row.kind) {
       await db.update(sleeps).set({ sleepDay, kind }).where(eq(sleeps.id, row.id));
@@ -649,7 +653,7 @@ export async function commitImport(input: {
           });
           continue;
         }
-        const sleepDay = sleepDayOf(startedAt, window);
+        const sleepDay = sleepDayFor(startedAt, window, endedAt);
         await tx.insert(sleeps).values({
           childId: child.id,
           startedAt,

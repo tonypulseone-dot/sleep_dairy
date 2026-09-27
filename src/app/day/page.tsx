@@ -1,16 +1,16 @@
 import { redirect } from 'next/navigation';
-import { and, asc, desc, eq, gte, isNotNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, lte } from 'drizzle-orm';
 import { db } from '@/db';
 import { sleeps } from '@/db/schema';
-import { DayView, type DayRow, type WakeView } from '@/components/DayView';
+import { DayView, type DayRow, type WakeKind, type WakeView } from '@/components/DayView';
+import { todayOf } from '@/lib/today';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import {
   formatDuration,
-  dayStartInstant,
   durationMinutes,
+  openingNight,
   shiftDate,
-  sleepDayOf,
   summarizeDay,
   type DayWindow,
 } from '@/lib/sleep-day';
@@ -35,16 +35,28 @@ export default async function DayPage({
   };
 
   const now = new Date();
-  const today = sleepDayOf(now, window);
+  const today = await todayOf(child.id, window, now);
   const query = await searchParams;
   const requested = query.d;
   const sleepDay = requested && DATE.test(requested) ? requested : today;
 
-  const rows = await db
-    .select()
-    .from(sleeps)
-    .where(and(eq(sleeps.childId, child.id), eq(sleeps.sleepDay, sleepDay)))
-    .orderBy(asc(sleeps.startedAt));
+  // Сутки дня и первый сон следующих: если он ночной, это «уход в ночь» —
+  // им заканчивается бодрствование этого дня.
+  const [rows, nextRows] = await Promise.all([
+    db
+      .select()
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), eq(sleeps.sleepDay, sleepDay)))
+      .orderBy(asc(sleeps.startedAt)),
+    db
+      .select()
+      .from(sleeps)
+      .where(and(eq(sleeps.childId, child.id), eq(sleeps.sleepDay, shiftDate(sleepDay, 1))))
+      .orderBy(asc(sleeps.startedAt))
+      .limit(1),
+  ]);
+  const nextNight = openingNight(nextRows, window);
+  const nextNightOpen = nextNight !== null && nextRows[0]?.endedAt === null;
 
   // Время форматируем на сервере, в зоне ребёнка: браузер мамы может быть
   // в другом поясе, и тогда дневник показал бы чужие часы.
@@ -55,67 +67,55 @@ export default async function DayPage({
     timeZone: parent.timeZone,
   });
 
-  /*
-   * Бодрствования между снами — то, что мама и Виктория смотрят рядом со
-   * снами. Первое — от пробуждения после ночи (ночь записана во вчерашних
-   * сутках) до первого сна; последнее у сегодняшнего дня — «бодрствует
-   * сейчас», пока малыш не уснул.
-   */
-  const dayStart = dayStartInstant(sleepDay, window);
-  const anchor = rows[0]?.startedAt ?? (sleepDay === today ? now : null);
-  const [before] = anchor
-    ? await db
-        .select({ endedAt: sleeps.endedAt })
-        .from(sleeps)
-        .where(
-          and(
-            eq(sleeps.childId, child.id),
-            isNotNull(sleeps.endedAt),
-            lte(sleeps.endedAt, anchor),
-            // Не дальше полусуток до начала дня: иначе «бодрствование» растянется на пропуск в записях.
-            gte(sleeps.endedAt, new Date(dayStart.getTime() - 12 * 3_600_000)),
-          ),
-        )
-        .orderBy(desc(sleeps.endedAt))
-        .limit(1)
-    : [];
-
-  // Итоги дня — с утренним бодрствованием, как в списке ниже.
   const totals = summarizeDay(
     sleepDay,
     rows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
     window,
     now,
-    before?.endedAt ?? null,
+    nextNight,
   );
 
-  const wake = (from: Date, to: Date | null, after: number): WakeView | null => {
+  /*
+   * Бодрствования — то, что мама и Виктория смотрят рядом со снами: с утра
+   * (после ночи этих же суток), между снами и перед следующей ночью. У
+   * сегодняшнего дня последнее — «бодрствует сейчас», пока малыш не уснул.
+   */
+  const wake = (from: Date, to: Date | null, after: number, kind: WakeKind): WakeView | null => {
     const minutes = durationMinutes(from, to ?? now, now);
     if (minutes < 1) return null;
-    return { after, from: time.format(from), to: to ? time.format(to) : null, duration: formatDuration(minutes) };
+    return { after, kind, from: time.format(from), to: to ? time.format(to) : null, duration: formatDuration(minutes) };
   };
   const wakes: WakeView[] = [];
-  let currentWake = 0;
-  if (before?.endedAt && rows[0]) {
-    const first = wake(before.endedAt, rows[0].startedAt, -1);
-    if (first) wakes.push(first);
-  }
   rows.forEach((row, index) => {
     const next = rows[index + 1];
-    if (next && row.endedAt) {
-      const between = wake(row.endedAt, next.startedAt, index);
-      if (between) wakes.push(between);
-    }
+    if (!next || !row.endedAt) return;
+    const kind: WakeKind =
+      row.kind === 'night' && next.kind === 'night' ? 'night' : row.kind === 'night' ? 'morning' : 'between';
+    const between = wake(row.endedAt, next.startedAt, index, kind);
+    if (between) wakes.push(between);
   });
-  if (sleepDay === today) {
-    const last = rows.at(-1);
+  const last = rows.at(-1);
+  let currentWake = 0;
+  if (last?.endedAt && totals.eveningWake !== null && nextNight) {
+    const evening = wake(last.endedAt, nextNight, rows.length - 1, 'evening');
+    if (evening) wakes.push(evening);
+  } else if (sleepDay === today && !nextNight && (!last || last.endedAt)) {
+    // Ещё не уснул на ночь: бодрствование идёт. Если записей за сутки нет —
+    // от последнего записанного сна, но не дальше 16 часов: иначе это пропуск.
+    const [before] = last
+      ? []
+      : await db
+          .select({ endedAt: sleeps.endedAt })
+          .from(sleeps)
+          .where(and(eq(sleeps.childId, child.id), isNotNull(sleeps.endedAt), lte(sleeps.endedAt, now)))
+          .orderBy(desc(sleeps.endedAt))
+          .limit(1);
     const since = last ? last.endedAt : (before?.endedAt ?? null);
-    // Больше 16 часов «бодрствования» — это пропуск в записях, а не бодрствование.
-    if (since && (!last || last.endedAt) && now.getTime() - since.getTime() < 16 * 3_600_000) {
-      const current = wake(since, null, rows.length - 1);
+    if (since && now.getTime() - since.getTime() < 16 * 3_600_000) {
+      const current = wake(since, null, rows.length - 1, last?.kind === 'night' ? 'morning' : 'between');
       if (current) {
         wakes.push(current);
-        // Сегодня «бодрствует сейчас» тоже идёт в итог — он совпадает с суммой строк.
+        // «Бодрствует сейчас» тоже идёт в итог — он совпадает с суммой строк.
         currentWake = durationMinutes(since, null, now);
       }
     }
@@ -159,6 +159,7 @@ export default async function DayPage({
       nextDay={sleepDay < today ? shiftDate(sleepDay, 1) : null}
       rows={view}
       wakes={wakes}
+      nextNight={nextNight ? { at: time.format(nextNight), ongoing: nextNightOpen } : null}
       totals={{
         daySleep: formatDuration(totals.daySleep),
         nightSleep: formatDuration(totals.nightSleep),

@@ -13,7 +13,10 @@ import {
   sleepDayOf,
   sleepKindOf,
   summarizeDay,
-  lastEndBefore,
+  sleepDayFor,
+  openingNight,
+  currentSleepDay,
+  latestAt,
   zonedTimeToUtc,
   type DayWindow,
 } from './sleep-day';
@@ -61,26 +64,93 @@ test('часовой пояс учитывается: во Владивосто�
   assert.equal(sleepDayOf(at, moscow), '2026-09-16');
 });
 
-test('сутки 16 сентября считаются целиком, вместе с ночью после полуночи', () => {
+test('сутки 16 сентября: ночь, закончившаяся утром 16-го, дневные сны и бодрствование до следующей ночи', () => {
   const totals = summarizeDay(
     '2026-09-16',
     [
+      { startedAt: msk('2026-09-15T21:00:00'), endedAt: msk('2026-09-16T07:00:00') },
       { startedAt: msk('2026-09-16T10:00:00'), endedAt: msk('2026-09-16T11:20:00') },
       { startedAt: msk('2026-09-16T14:00:00'), endedAt: msk('2026-09-16T15:30:00') },
-      { startedAt: msk('2026-09-17T00:30:00'), endedAt: msk('2026-09-17T07:00:00') },
     ],
     moscow,
+    msk('2026-09-17T09:00:00'),
+    msk('2026-09-16T20:30:00'),
   );
 
   assert.deepEqual(totals.naps, [80, 90]);
   assert.equal(totals.daySleep, 170);
-  assert.equal(totals.nightSleep, 390);
-  assert.equal(totals.totalSleep, 560);
-  assert.equal(formatDuration(totals.totalSleep), '9:20');
+  assert.equal(totals.nightSleep, 600);
+  assert.equal(formatDuration(totals.totalSleep), '12:50');
   assert.equal(totals.napCount, 2);
-  // Бодрствования между снами: 11:20→14:00 и 15:30→00:30.
-  assert.deepEqual(totals.wakeWindows, [160, 540]);
-  assert.equal(formatDuration(totals.totalWake), '11:40');
+  // С утра 07:00→10:00, между снами 11:20→14:00, перед ночью 15:30→20:30.
+  assert.deepEqual(totals.wakeWindows, [180, 160]);
+  assert.equal(totals.eveningWake, 300);
+  assert.equal(formatDuration(totals.totalWake), '10:40');
+  // Сон + бодрствование = сутки от начала ночи до следующей ночи.
+  assert.equal(totals.totalSleep + totals.totalWake, 23.5 * 60);
+});
+
+test('итог бодрствования: 5:18 с утра + 6:35 перед ночью = 11:53', () => {
+  const totals = summarizeDay(
+    '2026-09-17',
+    [
+      { startedAt: msk('2026-09-16T21:00:00'), endedAt: msk('2026-09-17T07:00:00') },
+      { startedAt: msk('2026-09-17T12:18:00'), endedAt: msk('2026-09-17T13:30:00') },
+    ],
+    moscow,
+    msk('2026-09-17T22:00:00'),
+    msk('2026-09-17T20:05:00'),
+  );
+  assert.deepEqual(totals.wakeWindows, [5 * 60 + 18]);
+  assert.equal(totals.eveningWake, 6 * 60 + 35);
+  assert.equal(totals.totalWake, 11 * 60 + 53);
+});
+
+test('ночное пробуждение между кусками ночи — не бодрствование дня', () => {
+  const totals = summarizeDay(
+    '2026-09-17',
+    [
+      { startedAt: msk('2026-09-16T21:00:00'), endedAt: msk('2026-09-17T02:00:00') },
+      { startedAt: msk('2026-09-17T02:40:00'), endedAt: msk('2026-09-17T07:00:00') },
+      { startedAt: msk('2026-09-17T10:00:00'), endedAt: msk('2026-09-17T11:00:00') },
+    ],
+    moscow,
+    msk('2026-09-17T12:00:00'),
+  );
+  assert.equal(totals.nightSleep, 5 * 60 + 260);
+  assert.deepEqual(totals.wakeWindows, [180]);
+  assert.equal(totals.eveningWake, null);
+  assert.equal(totals.totalWake, 180);
+});
+
+test('ночь относится к суткам, в которые закончилась, дневной сон — к суткам начала', () => {
+  assert.equal(sleepDayFor(msk('2026-09-26T21:00:00'), moscow, msk('2026-09-27T07:00:00')), '2026-09-27');
+  assert.equal(sleepDayFor(msk('2026-09-27T00:30:00'), moscow, msk('2026-09-27T07:00:00')), '2026-09-27');
+  // Уложили в 18:40, до «ночи», но проспал до утра — ночь 27-го.
+  assert.equal(sleepDayFor(msk('2026-09-26T18:40:00'), moscow, msk('2026-09-27T06:30:00')), '2026-09-27');
+  // Идущая ночь (конец неизвестен) — уже в следующих сутках.
+  assert.equal(sleepDayFor(msk('2026-09-26T21:00:00'), moscow), '2026-09-27');
+  assert.equal(sleepDayFor(msk('2026-09-27T12:00:00'), moscow, msk('2026-09-27T13:30:00')), '2026-09-27');
+});
+
+test('начало ночи, которой открываются сутки', () => {
+  const night = { startedAt: msk('2026-09-26T21:00:00'), endedAt: msk('2026-09-27T07:00:00') };
+  const nap = { startedAt: msk('2026-09-27T10:00:00'), endedAt: msk('2026-09-27T11:00:00') };
+  assert.deepEqual(openingNight([nap, night], moscow), night.startedAt);
+  assert.equal(openingNight([nap], moscow), null);
+  assert.equal(openingNight([], moscow), null);
+});
+
+test('сегодняшние сутки: по утренней границе, но ранний подъём после ночи уже открыл новые', () => {
+  assert.equal(currentSleepDay(msk('2026-09-28T05:30:00'), moscow), '2026-09-27');
+  assert.equal(currentSleepDay(msk('2026-09-28T05:30:00'), moscow, '2026-09-28'), '2026-09-28');
+  assert.equal(currentSleepDay(msk('2026-09-27T23:00:00'), moscow, '2026-09-27'), '2026-09-27');
+});
+
+test('идущий сон начался в последний раз, когда на часах было это время', () => {
+  const now = msk('2026-09-27T01:10:00');
+  assert.deepEqual(latestAt(parseTimeOfDay('21:30'), moscow, now), msk('2026-09-26T21:30:00'));
+  assert.deepEqual(latestAt(parseTimeOfDay('00:40'), moscow, now), msk('2026-09-27T00:40:00'));
 });
 
 test('незакрытый сон считается до текущего момента', () => {
@@ -133,30 +203,36 @@ test('дневной сон задним числом собирается в т
   assert.equal(durationMinutes(startedAt, endedAt), 90);
 });
 
-test('ночь, начатая после полуночи, встаёт на следующую календарную дату', () => {
+test('ночь в сутках 17-го, начатая после полуночи, — это утро 17-го', () => {
   const { startedAt, endedAt } = composeSleep(
-    '2026-09-16',
+    '2026-09-17',
     parseTimeOfDay('00:30'),
     parseTimeOfDay('07:00'),
     moscow,
   );
-  // Календарно это 17-е, но сонные сутки — 16-е.
   assert.equal(localDate(startedAt, 'Europe/Moscow'), '2026-09-17');
-  assert.equal(sleepDayOf(startedAt, moscow), '2026-09-16');
   assert.equal(sleepKindOf(startedAt, moscow), 'night');
+  assert.equal(sleepDayFor(startedAt, moscow, endedAt), '2026-09-17');
   assert.equal(formatDuration(durationMinutes(startedAt, endedAt)), '6:30');
 });
 
-test('ночь, начатая вечером, перешагивает полночь и не схлопывается', () => {
+test('ночь в сутках 17-го, начатая вечером, — ночь с 16 на 17', () => {
   const { startedAt, endedAt } = composeSleep(
     '2026-09-17',
     parseTimeOfDay('21:10'),
     parseTimeOfDay('06:50'),
     moscow,
   );
-  assert.equal(sleepDayOf(startedAt, moscow), '2026-09-17');
+  assert.deepEqual(startedAt, msk('2026-09-16T21:10:00'));
+  assert.deepEqual(endedAt, msk('2026-09-17T06:50:00'));
+  assert.equal(sleepDayFor(startedAt, moscow, endedAt), '2026-09-17');
   assert.equal(formatDuration(durationMinutes(startedAt, endedAt)), '9:40');
-  assert.ok(endedAt > startedAt);
+});
+
+test('уложили до «ночи», проспал до утра: в сутках 17-го это ночь с 16 на 17', () => {
+  const { startedAt, endedAt } = composeSleep('2026-09-17', parseTimeOfDay('18:40'), parseTimeOfDay('06:30'), moscow);
+  assert.deepEqual(startedAt, msk('2026-09-16T18:40:00'));
+  assert.equal(sleepDayFor(startedAt, moscow, endedAt), '2026-09-17');
 });
 
 test('сны раскладываются по кругу от утренней границы', () => {
@@ -206,31 +282,4 @@ test('сон, проспанный до утра, — ночной, даже е�
   assert.equal(sleepKindOf(start, w, new Date('2026-09-23T16:20:00Z')), 'day');
   // 21:00 → 08:30 — ночной по началу.
   assert.equal(sleepKindOf(new Date('2026-09-23T18:00:00Z'), w, new Date('2026-09-24T05:30:00Z')), 'night');
-});
-
-test('итог бодрствования включает утреннее — от пробуждения после ночи до первого сна', () => {
-  const night = { startedAt: msk('2026-09-16T21:00:00'), endedAt: msk('2026-09-17T07:00:00') };
-  const naps = [
-    { startedAt: msk('2026-09-17T12:18:00'), endedAt: msk('2026-09-17T13:30:00') },
-    { startedAt: msk('2026-09-17T20:05:00'), endedAt: msk('2026-09-17T20:40:00') },
-  ];
-  const nightEnd = lastEndBefore([night, ...naps], naps[0].startedAt, '2026-09-17', moscow);
-  assert.deepEqual(nightEnd, night.endedAt);
-  const totals = summarizeDay('2026-09-17', naps, moscow, msk('2026-09-17T22:00:00'), nightEnd);
-  assert.equal(totals.morningWake, 5 * 60 + 18);
-  assert.deepEqual(totals.wakeWindows, [6 * 60 + 35]);
-  assert.equal(totals.totalWake, 11 * 60 + 53);
-});
-
-test('без записанной ночи утреннего бодрствования нет, итог — только между снами', () => {
-  const naps = [
-    { startedAt: msk('2026-09-17T10:00:00'), endedAt: msk('2026-09-17T11:00:00') },
-    { startedAt: msk('2026-09-17T13:00:00'), endedAt: msk('2026-09-17T14:00:00') },
-  ];
-  const old = { startedAt: msk('2026-09-15T21:00:00'), endedAt: msk('2026-09-16T07:00:00') };
-  const nightEnd = lastEndBefore([old, ...naps], naps[0].startedAt, '2026-09-17', moscow);
-  assert.equal(nightEnd, null);
-  const totals = summarizeDay('2026-09-17', naps, moscow, msk('2026-09-17T22:00:00'), nightEnd);
-  assert.equal(totals.morningWake, null);
-  assert.equal(totals.totalWake, 120);
 });

@@ -85,6 +85,17 @@
 .wakeNow .wakeLine { opacity: 1; }
 .wakeNow .wakeLabel { color: var(--ink); font-weight: 600; }
 
+/* Верх суток — уход в следующую ночь: сама ночь уже в следующих сутках. */
+.list > li.nextNight {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px;
+  padding: 10px 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--night-ink) 35%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--night-ink); font-size: 14px;
+}
+.nextNight b { font-variant-numeric: tabular-nums; }
+.nextNight small { grid-column: 2; font-size: 12px; color: var(--ink-3); }
+
 /* Строка сна: цвет — от Виктории, значок — чтобы тип читался и без цвета. */
 .row {
   width: 100%;
@@ -158,7 +169,7 @@
 }
 .dayDate:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .preview {
-  margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin: 0; display: flex; align-items: flex-start; gap: 6px;
   font-size: 13.5px; color: var(--ink-2); line-height: 1.4;
 }
 .warn {
@@ -171,7 +182,8 @@
   align-self: flex-start; min-height: 44px; padding: 0 14px; border-radius: 12px;
   background: var(--night); color: var(--night-on); font-size: 14px; font-weight: 500;
 }
-.preview b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.preview b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.preview svg { flex: none; margin-top: 2px; }
 
 .editorActions { display: flex; flex-wrap: wrap; gap: 8px; }
 

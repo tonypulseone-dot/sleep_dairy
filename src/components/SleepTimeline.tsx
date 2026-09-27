@@ -6,7 +6,7 @@ import styles from './SleepTimeline.module.css';
 /**
  * Дневник клиентки для консультанта — не строчками, как в Excel, а сутками.
  *
- * Каждый день — шкала на 24 часа от маминой утренней границы, сны на ней —
+ * Каждый день — шкала на 24 часа с вечера накануне (сутки начинаются с ночи), сны на ней —
  * цветными отрезками: ночной синим, дневной жёлтым, те же цвета, что в
  * дневнике мамы и на графике выше. Консультант видит ритм формой: где
  * провалы, где сон съехал, какая ночь короткая, — не вчитываясь в цифры.
@@ -34,9 +34,10 @@ export interface TimelineDay {
   label: string;
   isToday: boolean;
   segments: TimelineSegment[];
-  wakeWindows: string[];
-  /** Бодрствование от пробуждения после ночи до первого сна дня. */
-  morningWake: string | null;
+  /** Бодрствование перед каждым сном (по индексу сна); night — ночное пробуждение. */
+  wakes: ({ text: string; night: boolean } | null)[];
+  /** Бодрствование перед следующей ночью и время, когда малыш на неё уснул. */
+  evening: { wake: string; night: string } | null;
   total: string;
   day: string;
   night: string;
@@ -58,19 +59,21 @@ const LABEL_ALWAYS_MINUTES = 150;
 
 export function SleepTimeline({
   days,
-  dayBoundary,
+  axisFrom,
   hint,
 }: {
   days: TimelineDay[];
-  dayBoundary: number;
+  /** С какого часа начинается шкала, минуты от полуночи. */
+  axisFrom: number;
   hint?: string;
 }) {
   const [tip, setTip] = useState<{ day: string; index: number } | null>(null);
 
-  // Часы оси: каждые три часа от утренней границы, как их читает консультант.
+  // Часы оси: каждые три часа от начала шкалы (вечера накануне).
+  const shift = (60 - (axisFrom % 60)) % 60;
   const ticks = Array.from({ length: 8 }, (_, i) => {
-    const hour = (Math.floor(dayBoundary / 60) + i * 3) % 24;
-    return { at: (i * 180) / 1440, label: `${hour}:00` };
+    const hour = (Math.ceil(axisFrom / 60) + i * 3) % 24;
+    return { at: (shift + i * 180) / 1440, label: `${hour}:00` };
   });
 
   return (
@@ -125,6 +128,7 @@ export function SleepTimeline({
                 ))}
 
                 {day.segments.map((segment, index) => {
+                  if (segment.to <= segment.from) return null;
                   const kind = segment.kind === 'night' ? 'Ночной сон' : 'Дневной сон';
                   const span = `${segment.start}–${segment.end ?? 'идёт'}`;
                   const open = tip?.day === day.sleepDay && tip.index === index;
@@ -180,18 +184,14 @@ export function SleepTimeline({
                   Между снами — бодрствование, в том же порядке, что на шкале. */}
               {day.segments.length > 0 && (
                 <ol className={styles.log} aria-label="Сны и бодрствования по порядку">
-                  {day.morningWake && (
-                    <li className={styles.logItem}>
-                      <span className={styles.logWake} title="бодрствование с утра, после ночи">
-                        <span aria-hidden="true">↔</span> {day.morningWake}
-                      </span>
-                    </li>
-                  )}
                   {day.segments.map((segment, index) => (
                     <li key={index} className={styles.logItem}>
-                      {index > 0 && day.wakeWindows[index - 1] && (
-                        <span className={styles.logWake} title="бодрствование">
-                          <span aria-hidden="true">↔</span> {day.wakeWindows[index - 1]}
+                      {day.wakes[index] && (
+                        <span
+                          className={styles.logWake}
+                          title={day.wakes[index].night ? 'ночное пробуждение' : day.segments[index - 1]?.kind === 'night' ? 'бодрствование с утра, после ночи' : 'бодрствование'}
+                        >
+                          <span aria-hidden="true">↔</span> {day.wakes[index].text}
                         </span>
                       )}
                       <span className={`${styles.logSleep} ${styles[`log_${segment.kind}`]}`}>
@@ -204,6 +204,16 @@ export function SleepTimeline({
                       </span>
                     </li>
                   ))}
+                  {day.evening && (
+                    <li className={styles.logItem}>
+                      <span className={styles.logWake} title="бодрствование перед ночью">
+                        <span aria-hidden="true">↔</span> {day.evening.wake}
+                      </span>
+                      <span className={styles.logWake} title="уход в ночной сон — ночь в следующих сутках">
+                        <span aria-hidden="true">→</span> ночь {day.evening.night}
+                      </span>
+                    </li>
+                  )}
                 </ol>
               )}
             </div>

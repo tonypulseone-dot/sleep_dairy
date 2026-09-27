@@ -13,7 +13,10 @@
  *   nightFrom   — во сколько начинается ночь. Сон, начавшийся после этого часа
  *                 (и до утренней границы), считается ночным, остальные — дневные.
  *
- * Сон всегда относится к тем суткам, в которые он НАЧАЛСЯ.
+ * Сутки по Виктории: ночной сон + бодрствование + дневные сны + бодрствование
+ * до следующей ночи. Поэтому ночь относится к тем суткам, в которые она
+ * ЗАКОНЧИЛАСЬ (ночь с 26 на 27 — в сутках 27-го), а дневной сон — к суткам,
+ * в которые он начался. См. sleepDayFor.
  */
 
 /** Время суток в минутах от полуночи. `06:30` → 390. */
@@ -125,6 +128,24 @@ export function sleepKindOf(startedAt: Date, window: DayWindow, endedAt?: Date |
   return 'day';
 }
 
+/**
+ * К каким суткам дневника относится сон. Дневной — к суткам начала, ночной —
+ * к следующим: ночь с 26 на 27 открывает сутки 27-го, с неё начинается день.
+ */
+export function sleepDayFor(startedAt: Date, window: DayWindow, endedAt?: Date | null): string {
+  const base = sleepDayOf(startedAt, window);
+  return sleepKindOf(startedAt, window, endedAt) === 'night' ? shiftDate(base, 1) : base;
+}
+
+/**
+ * Какие сутки сейчас. Обычно — по утренней границе; но если малыш уже проснулся
+ * после ночи раньше неё (ночь закончилась в 05:10), новые сутки начались.
+ */
+export function currentSleepDay(now: Date, window: DayWindow, lastNightDay: string | null = null): string {
+  const byClock = sleepDayOf(now, window);
+  return lastNightDay && lastNightDay > byClock ? lastNightDay : byClock;
+}
+
 /** Длительность в минутах. Незакрытый сон считаем до `now`. */
 export function durationMinutes(startedAt: Date, endedAt: Date | null, now: Date = new Date()): number {
   const end = endedAt ?? now;
@@ -146,16 +167,17 @@ export interface DayTotals {
   sleepDay: string;
   /** Длительности дневных снов по порядку. */
   naps: number[];
-  /** Бодрствования между снами суток, по порядку. */
-  wakeWindows: number[];
   /**
-   * Бодрствование с утра: от пробуждения после ночи (ночь — во вчерашних
-   * сутках) до первого сна дня. null — первого сна ещё нет или ночь не записана.
+   * Бодрствования дня по порядку: первое — с утра, после ночи, дальше — между
+   * дневными снами. Ночные пробуждения (между кусками одной ночи) сюда не идут.
    */
-  morningWake: number | null;
+  wakeWindows: number[];
+  /** Бодрствование от последнего сна до следующей ночи. null — ночь ещё не началась или не записана. */
+  eveningWake: number | null;
   daySleep: number;
   nightSleep: number;
   totalSleep: number;
+  /** Всё бодрствование суток: с утра, между снами и перед ночью. */
   totalWake: number;
   napCount: number;
 }
@@ -164,16 +186,16 @@ export interface DayTotals {
  * Считает всё, что Виктория выписывает руками: длительности снов,
  * бодрствования между ними, дневной, ночной и суточный сон.
  *
- * Бодрствования считаем от конца одного сна до начала следующего. Первое —
- * утреннее: от конца предыдущего сна (обычно вчерашней ночи, `nightEnd`)
- * до первого сна дня; оно входит в итог бодрствования за день.
+ * Сутки начинаются с ночи (она в этих же сутках), дальше бодрствования и
+ * дневные сны, и заканчиваются уходом в следующую ночь — `nextNight`, начало
+ * первого ночного сна следующих суток.
  */
 export function summarizeDay(
   sleepDay: string,
   records: SleepRecord[],
   window: DayWindow,
   now: Date = new Date(),
-  nightEnd: Date | null = null,
+  nextNight: Date | null = null,
 ): DayTotals {
   const sorted = [...records].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
 
@@ -181,37 +203,47 @@ export function summarizeDay(
   const wakeWindows: number[] = [];
   let daySleep = 0;
   let nightSleep = 0;
-  let previousEnd: Date | null = null;
+  let previous: { end: Date; night: boolean } | null = null;
 
   for (const record of sorted) {
-    if (previousEnd) {
-      wakeWindows.push(durationMinutes(previousEnd, record.startedAt, now));
+    const night = sleepKindOf(record.startedAt, window, record.endedAt) === 'night';
+    // Между двумя кусками ночи — ночное пробуждение, а не бодрствование дня.
+    if (previous && !(previous.night && night)) {
+      wakeWindows.push(durationMinutes(previous.end, record.startedAt, now));
     }
     const minutes = durationMinutes(record.startedAt, record.endedAt, now);
-    if (sleepKindOf(record.startedAt, window, record.endedAt) === 'night') {
+    if (night) {
       nightSleep += minutes;
     } else {
       daySleep += minutes;
       naps.push(minutes);
     }
-    previousEnd = record.endedAt ?? now;
+    previous = { end: record.endedAt ?? now, night };
   }
 
-  const totalSleep = daySleep + nightSleep;
-  const first = sorted[0];
-  const morning = nightEnd && first ? durationMinutes(nightEnd, first.startedAt, now) : 0;
-  const morningWake = morning > 0 ? morning : null;
+  const last = sorted.at(-1);
+  const evening =
+    last?.endedAt && nextNight ? Math.round((nextNight.getTime() - last.endedAt.getTime()) / 60000) : 0;
+  // Больше полусуток «перед ночью» — это пропуск в записях, а не бодрствование.
+  const eveningWake = evening > 0 && evening <= 12 * 60 ? evening : null;
+
   return {
     sleepDay,
     naps,
     wakeWindows,
-    morningWake,
+    eveningWake,
     daySleep,
     nightSleep,
-    totalSleep,
-    totalWake: wakeWindows.reduce((sum, value) => sum + value, 0) + (morningWake ?? 0),
+    totalSleep: daySleep + nightSleep,
+    totalWake: wakeWindows.reduce((sum, value) => sum + value, 0) + (eveningWake ?? 0),
     napCount: naps.length,
   };
+}
+
+/** Начало ночи, которой открываются сутки: первый сон, если он ночной. Для «ухода в ночь» накануне. */
+export function openingNight(records: SleepRecord[], window: DayWindow): Date | null {
+  const first = [...records].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())[0];
+  return first && sleepKindOf(first.startedAt, window, first.endedAt) === 'night' ? first.startedAt : null;
 }
 
 /**
@@ -273,13 +305,15 @@ export interface ComposedSleep {
 }
 
 /**
- * Мама выбирает сонные сутки и время начала и конца — здесь это превращается
+ * Мама выбирает сутки и время начала и конца — здесь это превращается
  * в два момента времени.
  *
- * Две ловушки, из-за которых ручной ввод обычно и врёт:
+ * Ловушки, из-за которых ручной ввод обычно и врёт:
  *   — сон, начавшийся до утренней границы, календарно уже на следующий день
- *     (укладывание в 00:30 относится к 16-м суткам, но дата у него 17-е);
- *   — конец раньше начала означает, что сон перешагнул полночь.
+ *     (укладывание в 00:30);
+ *   — конец раньше начала означает, что сон перешагнул полночь;
+ *   — ночь в сутках 27-го — это ночь с 26 на 27: она закончилась утром
+ *     этих суток, а началась накануне вечером.
  */
 export function composeSleep(
   sleepDay: string,
@@ -287,13 +321,28 @@ export function composeSleep(
   endMinutes: MinutesOfDay,
   window: DayWindow,
 ): ComposedSleep {
-  const startDate = startMinutes < window.dayBoundary ? shiftDate(sleepDay, 1) : sleepDay;
-  const startedAt = zonedTimeToUtc(startDate, startMinutes, window.timeZone);
+  const place = (day: string) => {
+    const startDate = startMinutes < window.dayBoundary ? shiftDate(day, 1) : day;
+    const endDate = endMinutes <= startMinutes ? shiftDate(startDate, 1) : startDate;
+    return {
+      startedAt: zonedTimeToUtc(startDate, startMinutes, window.timeZone),
+      endedAt: zonedTimeToUtc(endDate, endMinutes, window.timeZone),
+    };
+  };
+  const asDay = place(sleepDay);
+  return sleepKindOf(asDay.startedAt, window, asDay.endedAt) === 'night' ? place(shiftDate(sleepDay, -1)) : asDay;
+}
 
-  const endDate = endMinutes <= startMinutes ? shiftDate(startDate, 1) : startDate;
-  const endedAt = zonedTimeToUtc(endDate, endMinutes, window.timeZone);
-
-  return { startedAt, endedAt };
+/**
+ * Сон, который идёт сейчас, начался в `minutes` по часам ребёнка — значит,
+ * в последний раз, когда на часах было это время.
+ */
+export function latestAt(minutes: MinutesOfDay, window: DayWindow, now: Date = new Date()): Date {
+  const today = localDate(now, window.timeZone);
+  const candidate = zonedTimeToUtc(today, minutes, window.timeZone);
+  return candidate.getTime() > now.getTime() + 60_000
+    ? zonedTimeToUtc(shiftDate(today, -1), minutes, window.timeZone)
+    : candidate;
 }
 
 /* ------------------------------------------------------------------ *
@@ -348,25 +397,4 @@ export function daySegments(
     })
     .filter((segment) => segment.to > segment.from)
     .sort((a, b) => a.from - b.from);
-}
-
-/**
- * Конец сна, после которого начался день: последний сон, закончившийся до
- * `before` (первого сна дня), но не раньше чем за 12 часов до начала суток —
- * иначе «бодрствование» растянется на пропуск в записях.
- */
-export function lastEndBefore(
-  records: SleepRecord[],
-  before: Date,
-  sleepDay: string,
-  window: DayWindow,
-): Date | null {
-  const limit = dayStartInstant(sleepDay, window).getTime() - 12 * 3_600_000;
-  let found: Date | null = null;
-  for (const record of records) {
-    const end = record.endedAt;
-    if (!end || end.getTime() > before.getTime() || end.getTime() < limit) continue;
-    if (!found || end.getTime() > found.getTime()) found = end;
-  }
-  return found;
 }

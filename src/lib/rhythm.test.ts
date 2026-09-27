@@ -14,8 +14,8 @@ const row = (from: number, to: number, naps: number | null, windows: [number, nu
   note: 'Это ориентиры, а не строгие правила.',
 });
 
-const day = (naps: number[], wake: number[]): DayTotals => ({
-  sleepDay: '2026-09-18', naps, wakeWindows: wake, morningWake: null,
+const day = (naps: number[], wake: number[], evening: number | null = null): DayTotals => ({
+  sleepDay: '2026-09-18', naps, wakeWindows: wake, eveningWake: evening,
   daySleep: 0, nightSleep: 0, totalSleep: 0, totalWake: 0, napCount: naps.length,
 });
 
@@ -43,18 +43,18 @@ test('типичное число снов берётся медианой, а �
   assert.equal(typicalNapCount([]), null);
 });
 
-test('последнее бодрствование дня в среднее не идёт — это отбой', () => {
-  // По два окна в дне, последнее отбрасывается: остаются 120, 130, 140.
-  const days = [day([1], [120, 600]), day([1], [130, 620]), day([1], [140, 610])];
+test('бодрствование перед ночью в среднее не идёт — это отбой', () => {
+  // В каждом дне окно днём и перед ночью; вечернее отбрасывается: остаются 120, 130, 140.
+  const days = [day([1], [120], 600), day([1], [130], 620), day([1], [140], 610)];
   assert.equal(ownWakeWindow(days), 130);
 });
 
 test('пока окон мало, своего ритма не выдумываем', () => {
-  assert.equal(ownWakeWindow([day([1], [120, 600])]), null);
+  assert.equal(ownWakeWindow([day([1], [120], 600)]), null);
 });
 
 test('при своих данных показываем ритм ребёнка, а не норму', () => {
-  const days = [day([1], [120, 600]), day([1], [130, 620]), day([1], [140, 610])];
+  const days = [day([1], [120], 600), day([1], [130], 620), day([1], [140], 610)];
   const hint = rhythmHint(days, [row(6, 6, 2, [[135, 150]])], 6);
   assert.equal(hint?.source, 'own');
   assert.equal(hint?.min, 130);

@@ -8,7 +8,7 @@ import {
   shiftDate,
   sleepDayOf,
   summarizeDay,
-  lastEndBefore,
+  openingNight,
   type DayTotals,
   type DayWindow,
 } from '@/lib/sleep-day';
@@ -73,8 +73,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
   const rows = await db
     .select()
     .from(sleeps)
-    // С запасом в сутки: ночь накануне нужна для утреннего бодрствования.
-    .where(and(eq(sleeps.childId, child.id), gte(sleeps.sleepDay, shiftDate(from, -1))))
+    // Без верхней границы: ночь следующих суток нужна для бодрствования перед ней.
+    .where(and(eq(sleeps.childId, child.id), gte(sleeps.sleepDay, from)))
     .orderBy(asc(sleeps.startedAt));
 
   const byDay = new Map<string, { startedAt: Date; endedAt: Date | null }[]>();
@@ -87,9 +87,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
   const days: DayTotals[] = [];
   for (let offset = period - 1; offset >= 0; offset -= 1) {
     const sleepDay = shiftDate(today, -offset);
-    const records = byDay.get(sleepDay) ?? [];
-    const nightEnd = records[0] ? lastEndBefore(rows, records[0].startedAt, sleepDay, window) : null;
-    days.push(summarizeDay(sleepDay, records, window, now, nightEnd));
+    const nextNight = openingNight(byDay.get(shiftDate(sleepDay, 1)) ?? [], window);
+    days.push(summarizeDay(sleepDay, byDay.get(sleepDay) ?? [], window, now, nextNight));
   }
 
   const date = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC' });
@@ -98,7 +97,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
     ...days.map((day) => [
       date.format(new Date(`${day.sleepDay}T12:00:00Z`)),
       day.naps.map(formatDuration).join(' · '),
-      [...(day.morningWake === null ? [] : [day.morningWake]), ...day.wakeWindows].map(formatDuration).join(' · '),
+      // С утра, между снами и перед ночью — по порядку.
+      [...day.wakeWindows, ...(day.eveningWake === null ? [] : [day.eveningWake])].map(formatDuration).join(' · '),
       formatDuration(day.daySleep),
       formatDuration(day.nightSleep),
       formatDuration(day.totalWake),

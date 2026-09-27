@@ -78,6 +78,13 @@
       "when": 1790383210473,
       "tag": "0010_feeding_log",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790504126204,
+      "tag": "0011_night_belongs_to_morning",
+      "breakpoints": true
     }
   ]
 }
