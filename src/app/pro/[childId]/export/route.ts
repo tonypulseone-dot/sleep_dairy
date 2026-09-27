@@ -8,6 +8,7 @@ import {
   shiftDate,
   sleepDayOf,
   summarizeDay,
+  lastEndBefore,
   type DayTotals,
   type DayWindow,
 } from '@/lib/sleep-day';
@@ -72,7 +73,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
   const rows = await db
     .select()
     .from(sleeps)
-    .where(and(eq(sleeps.childId, child.id), gte(sleeps.sleepDay, from)))
+    // С запасом в сутки: ночь накануне нужна для утреннего бодрствования.
+    .where(and(eq(sleeps.childId, child.id), gte(sleeps.sleepDay, shiftDate(from, -1))))
     .orderBy(asc(sleeps.startedAt));
 
   const byDay = new Map<string, { startedAt: Date; endedAt: Date | null }[]>();
@@ -85,7 +87,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
   const days: DayTotals[] = [];
   for (let offset = period - 1; offset >= 0; offset -= 1) {
     const sleepDay = shiftDate(today, -offset);
-    days.push(summarizeDay(sleepDay, byDay.get(sleepDay) ?? [], window, now));
+    const records = byDay.get(sleepDay) ?? [];
+    const nightEnd = records[0] ? lastEndBefore(rows, records[0].startedAt, sleepDay, window) : null;
+    days.push(summarizeDay(sleepDay, records, window, now, nightEnd));
   }
 
   const date = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC' });
@@ -94,7 +98,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chil
     ...days.map((day) => [
       date.format(new Date(`${day.sleepDay}T12:00:00Z`)),
       day.naps.map(formatDuration).join(' · '),
-      day.wakeWindows.map(formatDuration).join(' · '),
+      [...(day.morningWake === null ? [] : [day.morningWake]), ...day.wakeWindows].map(formatDuration).join(' · '),
       formatDuration(day.daySleep),
       formatDuration(day.nightSleep),
       formatDuration(day.totalWake),

@@ -18,6 +18,7 @@ import {
   shiftDate,
   sleepDayOf,
   summarizeDay,
+  lastEndBefore,
   type DayTotals,
   type DayWindow,
 } from '@/lib/sleep-day';
@@ -93,7 +94,10 @@ export default async function ClientCard({
   const days: DayTotals[] = [];
   for (let offset = 0; offset < period; offset += 1) {
     const sleepDay = shiftDate(today, -offset);
-    days.push(summarizeDay(sleepDay, byDay.get(sleepDay) ?? [], window, now));
+    const records = byDay.get(sleepDay) ?? [];
+    // Утреннее бодрствование идёт в итог дня — от пробуждения после вчерашней ночи.
+    const nightEnd = records[0] ? lastEndBefore(rows, records[0].startedAt, sleepDay, window) : null;
+    days.push(summarizeDay(sleepDay, records, window, now, nightEnd));
   }
 
   // Сегодняшний день ещё не закончился: включать его в среднее — занижать цифру.
@@ -105,18 +109,6 @@ export default async function ClientCard({
   for (const row of rows) byDayRows.set(row.sleepDay, [...(byDayRows.get(row.sleepDay) ?? []), row]);
   const clock = (at: Date) => formatTimeOfDay(localMinutes(at, window.timeZone));
   const timelineLabel = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-  // Бодрствование с утра: от пробуждения после ночи (она во вчерашних сутках) до первого сна дня.
-  const morningWake = (sleepDay: string): string | null => {
-    const first = byDayRows.get(sleepDay)?.[0];
-    if (!first) return null;
-    const limit = dayStartInstant(sleepDay, window).getTime() - 12 * 3_600_000;
-    const before = rows.filter(
-      (row) => row.endedAt && row.endedAt.getTime() <= first.startedAt.getTime() && row.endedAt.getTime() >= limit,
-    ).at(-1);
-    if (!before?.endedAt) return null;
-    const minutes = durationMinutes(before.endedAt, first.startedAt);
-    return minutes > 0 ? formatDuration(minutes) : null;
-  };
   const timeline: TimelineDay[] = days.map((day) => {
     const start = dayStartInstant(day.sleepDay, window).getTime();
     const minutesFrom = (at: Date) => (at.getTime() - start) / 60000;
@@ -142,7 +134,7 @@ export default async function ClientCard({
       isToday: day.sleepDay === today,
       segments,
       wakeWindows: day.wakeWindows.map(formatDuration),
-      morningWake: morningWake(day.sleepDay),
+      morningWake: day.morningWake === null ? null : formatDuration(day.morningWake),
       total: formatDuration(day.totalSleep),
       day: formatDuration(day.daySleep),
       night: formatDuration(day.nightSleep),

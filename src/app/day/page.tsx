@@ -46,13 +46,6 @@ export default async function DayPage({
     .where(and(eq(sleeps.childId, child.id), eq(sleeps.sleepDay, sleepDay)))
     .orderBy(asc(sleeps.startedAt));
 
-  const totals = summarizeDay(
-    sleepDay,
-    rows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
-    window,
-    now,
-  );
-
   // Время форматируем на сервере, в зоне ребёнка: браузер мамы может быть
   // в другом поясе, и тогда дневник показал бы чужие часы.
   const time = new Intl.DateTimeFormat('ru-RU', {
@@ -87,12 +80,22 @@ export default async function DayPage({
         .limit(1)
     : [];
 
+  // Итоги дня — с утренним бодрствованием, как в списке ниже.
+  const totals = summarizeDay(
+    sleepDay,
+    rows.map((row) => ({ startedAt: row.startedAt, endedAt: row.endedAt })),
+    window,
+    now,
+    before?.endedAt ?? null,
+  );
+
   const wake = (from: Date, to: Date | null, after: number): WakeView | null => {
     const minutes = durationMinutes(from, to ?? now, now);
     if (minutes < 1) return null;
     return { after, from: time.format(from), to: to ? time.format(to) : null, duration: formatDuration(minutes) };
   };
   const wakes: WakeView[] = [];
+  let currentWake = 0;
   if (before?.endedAt && rows[0]) {
     const first = wake(before.endedAt, rows[0].startedAt, -1);
     if (first) wakes.push(first);
@@ -110,7 +113,11 @@ export default async function DayPage({
     // Больше 16 часов «бодрствования» — это пропуск в записях, а не бодрствование.
     if (since && (!last || last.endedAt) && now.getTime() - since.getTime() < 16 * 3_600_000) {
       const current = wake(since, null, rows.length - 1);
-      if (current) wakes.push(current);
+      if (current) {
+        wakes.push(current);
+        // Сегодня «бодрствует сейчас» тоже идёт в итог — он совпадает с суммой строк.
+        currentWake = durationMinutes(since, null, now);
+      }
     }
   }
 
@@ -156,7 +163,7 @@ export default async function DayPage({
         daySleep: formatDuration(totals.daySleep),
         nightSleep: formatDuration(totals.nightSleep),
         totalSleep: formatDuration(totals.totalSleep),
-        totalWake: formatDuration(totals.totalWake),
+        totalWake: formatDuration(totals.totalWake + currentWake),
         napCount: totals.napCount,
       }}
       sex={child.sex}

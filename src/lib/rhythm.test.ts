@@ -15,7 +15,7 @@ const row = (from: number, to: number, naps: number | null, windows: [number, nu
 });
 
 const day = (naps: number[], wake: number[]): DayTotals => ({
-  sleepDay: '2026-09-18', naps, wakeWindows: wake,
+  sleepDay: '2026-09-18', naps, wakeWindows: wake, morningWake: null,
   daySleep: 0, nightSleep: 0, totalSleep: 0, totalWake: 0, napCount: naps.length,
 });
 

@@ -146,8 +146,13 @@ export interface DayTotals {
   sleepDay: string;
   /** Длительности дневных снов по порядку. */
   naps: number[];
-  /** Длительности бодрствований между снами. */
+  /** Бодрствования между снами суток, по порядку. */
   wakeWindows: number[];
+  /**
+   * Бодрствование с утра: от пробуждения после ночи (ночь — во вчерашних
+   * сутках) до первого сна дня. null — первого сна ещё нет или ночь не записана.
+   */
+  morningWake: number | null;
   daySleep: number;
   nightSleep: number;
   totalSleep: number;
@@ -159,15 +164,16 @@ export interface DayTotals {
  * Считает всё, что Виктория выписывает руками: длительности снов,
  * бодрствования между ними, дневной, ночной и суточный сон.
  *
- * Бодрствования считаем внутри суток: от конца одного сна до начала следующего.
- * Последний интервал — от конца последнего сна до утренней границы следующего дня,
- * он закрывается только когда день завершён.
+ * Бодрствования считаем от конца одного сна до начала следующего. Первое —
+ * утреннее: от конца предыдущего сна (обычно вчерашней ночи, `nightEnd`)
+ * до первого сна дня; оно входит в итог бодрствования за день.
  */
 export function summarizeDay(
   sleepDay: string,
   records: SleepRecord[],
   window: DayWindow,
   now: Date = new Date(),
+  nightEnd: Date | null = null,
 ): DayTotals {
   const sorted = [...records].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
 
@@ -192,14 +198,18 @@ export function summarizeDay(
   }
 
   const totalSleep = daySleep + nightSleep;
+  const first = sorted[0];
+  const morning = nightEnd && first ? durationMinutes(nightEnd, first.startedAt, now) : 0;
+  const morningWake = morning > 0 ? morning : null;
   return {
     sleepDay,
     naps,
     wakeWindows,
+    morningWake,
     daySleep,
     nightSleep,
     totalSleep,
-    totalWake: wakeWindows.reduce((sum, value) => sum + value, 0),
+    totalWake: wakeWindows.reduce((sum, value) => sum + value, 0) + (morningWake ?? 0),
     napCount: naps.length,
   };
 }
@@ -338,4 +348,25 @@ export function daySegments(
     })
     .filter((segment) => segment.to > segment.from)
     .sort((a, b) => a.from - b.from);
+}
+
+/**
+ * Конец сна, после которого начался день: последний сон, закончившийся до
+ * `before` (первого сна дня), но не раньше чем за 12 часов до начала суток —
+ * иначе «бодрствование» растянется на пропуск в записях.
+ */
+export function lastEndBefore(
+  records: SleepRecord[],
+  before: Date,
+  sleepDay: string,
+  window: DayWindow,
+): Date | null {
+  const limit = dayStartInstant(sleepDay, window).getTime() - 12 * 3_600_000;
+  let found: Date | null = null;
+  for (const record of records) {
+    const end = record.endedAt;
+    if (!end || end.getTime() > before.getTime() || end.getTime() < limit) continue;
+    if (!found || end.getTime() > found.getTime()) found = end;
+  }
+  return found;
 }
