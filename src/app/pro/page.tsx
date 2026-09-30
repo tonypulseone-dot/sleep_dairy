@@ -6,6 +6,7 @@ import { accessGrants, children, consultantNotes, parents, sleeps } from '@/db/s
 import { currentConsultant } from '@/lib/pro-session';
 import { durationMinutes, formatDuration, sleepDayOf } from '@/lib/sleep-day';
 import { ageLabel, ageMonths, daysAgo, plural } from '@/lib/pro-format';
+import { reminderText } from '@/lib/reminder';
 import {
   QUIET_AFTER_DAYS,
   TREND_STEP,
@@ -29,15 +30,6 @@ const STATUS: Record<ClientStatus, { label: string; className: string }> = {
   new: { label: 'только подключилась', className: dash.stNew },
 };
 
-/** Готовый текст напоминания — Виктория копирует его в переписку с мамой. */
-function reminderText(parentName: string | null, silentDays: number | null): string {
-  const hello = parentName ? `${parentName}, здравствуйте!` : 'Здравствуйте!';
-  if (silentDays === null) {
-    return `${hello} Как у вас дела? Вижу, в дневнике сна пока нет записей — получилось открыть приложение? Если что-то не выходит, напишите, помогу.`;
-  }
-  return `${hello} Как у вас дела? Вижу, в дневнике сна нет записей уже ${silentDays} ${plural(silentDays, 'день', 'дня', 'дней')} — всё в порядке? Если отмечать неудобно, напишите, подскажу, как проще. Пропущенные сны можно внести задним числом — кнопка «Внести сон вручную» на главном экране.`;
-}
-
 export default async function ProHome() {
   const consultant = await currentConsultant();
   if (!consultant) redirect('/pro/login');
@@ -48,6 +40,7 @@ export default async function ProHome() {
     .select({
       childId: children.id,
       name: children.name,
+      sex: children.sex,
       birthDate: children.birthDate,
       dueDate: children.dueDate,
       dayBoundary: children.dayBoundaryMinutes,
@@ -194,15 +187,18 @@ export default async function ProHome() {
         </div>
         <div className={`${dash.kpi} ${dash.kpiGood}`}>
           <span className={dash.kpiLabel}>Ведут дневник</span>
-          <span className={dash.kpiValue}>{summary.active}</span>
-          <span className={dash.kpiHint}>отмечали сны сегодня или вчера</span>
+          <span className={dash.kpiValue}>{summary.active + summary.slowing}</span>
+          <span className={dash.kpiHint}>
+            отмечали сны сегодня или вчера
+            {summary.slowing > 0 ? ` · из них ${summary.slowing} реже, чем через день` : ''}
+          </span>
         </div>
         <div className={`${dash.kpi} ${summary.quiet > 0 ? dash.kpiWarn : ''}`}>
           <span className={dash.kpiLabel}>Кому напомнить</span>
           <span className={dash.kpiValue}>{summary.quiet}</span>
           <span className={dash.kpiHint}>
-            {QUIET_AFTER_DAYS}+ {plural(QUIET_AFTER_DAYS, 'день', 'дня', 'дней')} без записей
-            {summary.slowing > 0 ? ` · ещё ${summary.slowing} реже отмечают` : ''}
+            последняя запись {QUIET_AFTER_DAYS}+ {plural(QUIET_AFTER_DAYS, 'день', 'дня', 'дней')} назад или записей нет — текст
+            напоминания подстроится под срок
           </span>
         </div>
         <div className={dash.kpi}>
@@ -264,7 +260,7 @@ export default async function ProHome() {
                   </span>
                 </Link>
                 <CopyButton
-                  text={reminderText(client.parentName, client.silentDays)}
+                  text={reminderText(client.parentName, client.silentDays, client.withUsDays, client.sex)}
                   label="Скопировать сообщение"
                   className={dash.remindCopy}
                 />

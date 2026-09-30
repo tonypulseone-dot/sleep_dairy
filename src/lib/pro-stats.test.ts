@@ -4,11 +4,25 @@ import { ageGroups, clientStats, dailyActivity, summarize } from './pro-stats';
 
 const now = new Date('2026-09-24T09:00:00Z'); // 12:00 по Москве
 const base = { childId: 'c', today: '2026-09-24', sleeps: [] as { sleepDay: string; minutes: number }[] };
+/** Отмечала каждые сутки последней недели. */
+const everyDay = Array.from({ length: 7 }, (_, i) => ({ sleepDay: `2026-09-${String(23 - i).padStart(2, '0')}`, minutes: 700 }));
 
 test('статус: записи вчера — ведёт дневник', () => {
-  const s = clientStats({ ...base, grantedAt: new Date('2026-09-01T10:00:00Z'), lastEntryAt: new Date('2026-09-23T18:00:00Z') }, now);
+  const s = clientStats({ ...base, sleeps: everyDay, grantedAt: new Date('2026-09-01T10:00:00Z'), lastEntryAt: new Date('2026-09-23T18:00:00Z') }, now);
   assert.equal(s.status, 'active');
   assert.equal(s.silentDays, 1);
+});
+
+test('статус: позавчера последняя запись — уже пора напомнить', () => {
+  const s = clientStats({ ...base, grantedAt: new Date('2026-09-01T10:00:00Z'), lastEntryAt: new Date('2026-09-22T18:00:00Z') }, now);
+  assert.equal(s.status, 'quiet');
+  assert.equal(s.silentDays, 2);
+});
+
+test('статус: пишет, но реже чем через день — «реже отмечает»', () => {
+  const sleeps = [{ sleepDay: '2026-09-23', minutes: 700 }, { sleepDay: '2026-09-19', minutes: 700 }];
+  const s = clientStats({ ...base, sleeps, grantedAt: new Date('2026-09-01T10:00:00Z'), lastEntryAt: new Date('2026-09-23T18:00:00Z') }, now);
+  assert.equal(s.status, 'slowing');
 });
 
 test('статус: три дня тишины — пора напомнить', () => {
@@ -20,7 +34,8 @@ test('статус: три дня тишины — пора напомнить',
 test('статус: только подключилась и ещё не писала — не тревожим', () => {
   const s = clientStats({ ...base, grantedAt: new Date('2026-09-23T15:00:00Z'), lastEntryAt: null }, now);
   assert.equal(s.status, 'new');
-  const later = clientStats({ ...base, grantedAt: new Date('2026-09-20T15:00:00Z'), lastEntryAt: null }, now);
+  // Порог тот же, что для тех, кто уже писал: второй день без записей.
+  const later = clientStats({ ...base, grantedAt: new Date('2026-09-22T15:00:00Z'), lastEntryAt: null }, now);
   assert.equal(later.status, 'quiet');
 });
 
@@ -46,7 +61,7 @@ test('новенькую не штрафуем за дни до подключе
 });
 
 test('сводка и активность по дням', () => {
-  const a = { ...clientStats({ ...base, grantedAt: new Date('2026-09-20T10:00:00Z'), lastEntryAt: now }, now), grantedAt: new Date('2026-09-20T10:00:00Z') };
+  const a = { ...clientStats({ ...base, sleeps: everyDay, grantedAt: new Date('2026-09-20T10:00:00Z'), lastEntryAt: now }, now), grantedAt: new Date('2026-09-20T10:00:00Z') };
   const b = { ...clientStats({ ...base, grantedAt: new Date('2026-08-01T10:00:00Z'), lastEntryAt: new Date('2026-09-10T10:00:00Z') }, now), grantedAt: new Date('2026-08-01T10:00:00Z') };
   const sum = summarize([a, b], [new Date('2026-09-10T10:00:00Z'), new Date('2026-07-01T10:00:00Z')], now);
   assert.equal(sum.total, 2);

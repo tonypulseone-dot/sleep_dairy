@@ -3,11 +3,16 @@
  * затих и кому пора написать, как меняется сон. Чистые функции над уже
  * выбранными из базы данными — страница только рисует.
  *
- * Дни считаем календарём консультанта (Москва): «не отмечала три дня» —
+ * Дни считаем календарём консультанта (Москва): «не отмечала два дня» —
  * это про её неделю, а не про пояса мам.
  */
 
-export const QUIET_AFTER_DAYS = 3;
+/**
+ * С какого дня без записей мама «затихла» и Виктории предлагается напомнить.
+ * Один порог и для тех, кто писал, и для тех, кто ещё не начал: 2 — это
+ * «вчера записей не было».
+ */
+export const QUIET_AFTER_DAYS = 2;
 const DAY = 86_400_000;
 
 export type ClientStatus = 'active' | 'slowing' | 'quiet' | 'new';
@@ -62,11 +67,6 @@ export function clientStats(input: ClientInput, now: Date): ClientStats {
   const withUsDays = Math.max(0, daysBetween(localDate(input.grantedAt), todayHere));
   const silentDays = input.lastEntryAt ? Math.max(0, daysBetween(localDate(input.lastEntryAt), todayHere)) : null;
 
-  let status: ClientStatus;
-  if (silentDays === null) status = withUsDays < 2 ? 'new' : 'quiet';
-  else if (silentDays <= 1) status = 'active';
-  else if (silentDays < QUIET_AFTER_DAYS) status = 'slowing';
-  else status = 'quiet';
 
   // Сутки малыша → сумма сна. Сегодняшние не берём: день не закончен.
   const totals = new Map<string, number>();
@@ -92,13 +92,21 @@ export function clientStats(input: ClientInput, now: Date): ClientStats {
   // штрафуем за неделю, когда её ещё не было.
   const span = Math.min(7, withUsDays);
   let regularity: number | null = null;
-  if (span > 0 && status !== 'new') {
+  if (span > 0 && !(silentDays === null && withUsDays < QUIET_AFTER_DAYS)) {
     let marked = 0;
     for (let offset = 1; offset <= span; offset += 1) {
       if (totals.has(shiftIso(input.today, -offset))) marked += 1;
     }
     regularity = marked / span;
   }
+
+  // Затихла — столько же дней, сколько в тексте напоминания. «Реже отмечает» —
+  // пишет, но за последнюю неделю отмечено меньше половины суток.
+  let status: ClientStatus;
+  if (silentDays === null) status = withUsDays < QUIET_AFTER_DAYS ? 'new' : 'quiet';
+  else if (silentDays >= QUIET_AFTER_DAYS) status = 'quiet';
+  else if (withUsDays >= 4 && regularity !== null && regularity < 0.5) status = 'slowing';
+  else status = 'active';
 
   return {
     childId: input.childId,
