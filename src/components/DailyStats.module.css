@@ -1,0 +1,94 @@
+.list {
+  display: grid; gap: 12px;
+  /* На телефоне — одна под другой, в кабинете на компьютере — по две в ряд. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+}
+
+.empty {
+  margin: 0; padding: 18px 16px;
+  border-radius: var(--radius); background: var(--surface);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-2); font-size: 14px; line-height: 1.45;
+}
+
+/* Цвет линии — по цифре суток; текст всегда цветами текста. */
+.metric { --metric: var(--ink-2); --col: 44px; }
+.metric[data-metric='day'] { --metric: var(--day); }
+.metric[data-metric='night'] { --metric: var(--night); }
+.metric[data-metric='wake'] { --metric: var(--stat-wake); }
+
+.metric {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 14px 14px 10px;
+  min-width: 0;
+}
+
+.head { display: grid; gap: 2px; margin-bottom: 8px; }
+.title {
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font-size: 16px; font-weight: 600; color: var(--ink);
+}
+/* Метка-линия у названия — тот же цвет, что у линии графика. */
+.key { width: 14px; height: 3px; border-radius: 2px; background: var(--metric); flex: none; }
+.note { font-size: 12.5px; color: var(--ink-3); }
+.readout { margin: 4px 0 0; min-height: 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+.readout b { color: var(--ink); font-weight: 600; }
+
+/* Если дней больше, чем влезает, — листаются вбок, а страница остаётся на месте. */
+.scroller {
+  overflow-x: auto; overscroll-behavior-x: contain;
+  margin: 0 -14px; padding: 0 14px;
+  scrollbar-width: thin;
+}
+.strip { display: grid; min-width: 100%; }
+
+.plot { grid-column: 1 / -1; position: relative; height: 64px; margin-bottom: 4px; }
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.line { fill: none; stroke: var(--metric); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
+.area { fill: var(--metric); opacity: .1; stroke: none; }
+.dot {
+  position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+  border-radius: 50%; background: var(--metric);
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+}
+.dotOn { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+.crosshair {
+  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px;
+  background: var(--line); pointer-events: none;
+}
+
+/* Столбик дня: день недели, число, значение, разница с предыдущим днём. */
+.col {
+  display: grid; justify-items: center; gap: 1px;
+  padding: 6px 2px 8px;
+  border-radius: 12px;
+  color: var(--ink); text-decoration: none;
+  outline-offset: -2px;
+  cursor: default;
+}
+a.col { cursor: pointer; }
+.colOn { background: var(--surface-2); }
+.weekday { font-size: 11.5px; color: var(--ink-3); }
+.date { font-size: 13px; color: var(--ink-2); }
+.value { margin-top: 4px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.delta { font-size: 11.5px; color: var(--ink-3); white-space: pre; font-variant-numeric: tabular-nums; }
+
+/* Сегодня сутки ещё идут: цифра честная, но приглушённая. */
+.today .value { color: var(--ink-2); font-weight: 500; }
+.blank .value { color: var(--ink-3); font-weight: 400; }
+
+/* Узкий экран: семь дней должны встать в строку и не слипнуться цифрами. */
+@media (max-width: 359px) {
+  .metric { --col: 36px; padding-inline: 10px; }
+  .scroller { margin-inline: -10px; padding-inline: 10px; }
+  .col { padding-inline: 0; }
+  .value { font-size: 12.5px; letter-spacing: -.01em; }
+  .delta { font-size: 10.5px; }
+}
+@media (min-width: 360px) and (max-width: 419px) {
+  .value { font-size: 14px; }
+}

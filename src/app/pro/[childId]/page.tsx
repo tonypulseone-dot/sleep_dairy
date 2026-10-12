@@ -6,6 +6,10 @@ import { accessGrants, children, consultantNotes, parents, sleeps } from '@/db/s
 import { SleepChart, type ChartDay } from '@/components/SleepChart';
 import { SleepTimeline, type TimelineDay } from '@/components/SleepTimeline';
 import { ProNotes } from '@/components/ProNotes';
+import { DailyStats, type StatDayView } from '@/components/DailyStats';
+import { METRIC_KEYS, periodDays } from '@/lib/daily-stats';
+import { loadStatDays } from '@/lib/daily-stats-data';
+import { withDayLabels } from '@/lib/stat-labels';
 import { ageLabel, clockOf } from '@/lib/pro-format';
 import { currentConsultant } from '@/lib/pro-session';
 import {
@@ -163,6 +167,11 @@ export default async function ClientCard({
     };
   });
 
+  // Статистика по дням — той же выборкой, что у мамы, по периоду карточки.
+  const statDays: StatDayView[] = (
+    await loadStatDays({ childId, window, days: periodDays(today, period), today, now })
+  ).map(withDayLabels);
+
   // График читается слева направо от старых дней к свежим, как и любая динамика.
   const chartDays: ChartDay[] = [...days].reverse().map((day) => ({
     label: new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -282,6 +291,19 @@ export default async function ClientCard({
           Скачать таблицу
         </a>
       </div>
+
+      {/* То же, что мама видит на экране «Статистика»: цифры суток день за днём. */}
+      <section className={styles.statsBlock} aria-labelledby="stats-title">
+        <div className={styles.sectionHead}>
+          <h2 id="stats-title" className={styles.sectionTitle}>
+            Статистика по дням
+          </h2>
+          <span className={styles.private}>
+            как у мамы на экране «Статистика» · стрелка — разница с предыдущим днём, сегодняшний день в среднее не идёт
+          </span>
+        </div>
+        <DailyStats days={statDays} metrics={METRIC_KEYS} />
+      </section>
 
       <SleepChart
         days={chartDays}

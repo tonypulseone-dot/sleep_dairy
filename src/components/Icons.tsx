@@ -51,6 +51,16 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+/** Столбики на оси — статистика по дням. */
+export function IconChart(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 20h16" />
+      <path d="M7 16.5V12M12 16.5V6.5M17 16.5V9.5" strokeWidth={2.6} />
+    </Svg>
+  );
+}
+
 export function IconSun(props: IconProps) {
   return (
     <Svg {...props}>

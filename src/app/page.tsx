@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconBottle, IconForward, IconImport, IconSettings, IconToy } from '@/components/Icons';
+import { IconBottle, IconChart, IconForward, IconImport, IconSettings, IconToy } from '@/components/Icons';
 import { gigachatConfigured } from '@/lib/gigachat';
 import { childWords } from '@/lib/words';
 import { SexPrompt } from '@/components/SexPrompt';
@@ -176,6 +176,10 @@ export default async function Home() {
           <span className={styles.date}>{dateLabel}</span>
         </div>
         <div className={styles.tools}>
+          {/* Статистика по дням: бодрствование, дневной, ночной и суточный сон. */}
+          <Link href="/stats" className={styles.tool} aria-label="Статистика">
+            <IconChart />
+          </Link>
           <ThemeToggle theme={resolveTheme(parent.themePref, window, now)} className={styles.tool} />
           <Link href="/settings" className={styles.tool} aria-label="Настройки">
             <IconSettings />

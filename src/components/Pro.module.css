@@ -182,3 +182,6 @@
 .fieldValue .health { margin-top: 2px; display: block; font-weight: 400; }
 .fieldHint { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
 .muted { color: var(--ink-2); font-weight: 400; }
+
+/* Статистика по дням в карточке клиентки — заголовок и карточки цифр. */
+.statsBlock { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
