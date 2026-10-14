@@ -23,5 +23,27 @@
 .lead { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
 
 
+/* Группа возраста: заголовок и вступление Виктории, если оно есть. */
+.group { display: flex; flex-direction: column; gap: 6px; }
+.groupTitle { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.groupNote { margin: 0; font-size: 13px; color: var(--ink-3); line-height: 1.45; }
+.backLink { color: var(--play-ink); text-underline-offset: 3px; }
+.intro {
+  margin: 2px 0 0; padding: 12px 14px;
+  border-radius: var(--radius-sm); background: var(--play-soft); color: var(--play-ink);
+  font-size: 14.5px; line-height: 1.5;
+}
+
+/* Другие возрасты — внизу, чтобы не отвлекать от своего. */
+.others { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.othersLabel { font-size: 13px; color: var(--ink-3); }
+.othersList { display: flex; flex-wrap: wrap; gap: 6px; }
+.other {
+  min-height: 44px; padding: 0 12px;
+  display: inline-flex; align-items: center;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-2); font-size: 13.5px; text-decoration: none; white-space: nowrap;
+}
+.otherOn { border-color: var(--play); background: var(--play-soft); color: var(--play-ink); font-weight: 600; }
 
 .empty { color: var(--ink-3); font-size: 14px; text-align: center; padding: 26px 0; }

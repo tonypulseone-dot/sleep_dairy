@@ -1,90 +1,66 @@
 'use client';
 
 import { useState } from 'react';
-import { IconBlocks, IconBolt, IconMoon } from './Icons';
+import type { ActivitySection } from '@/db/schema';
 import styles from './ActivityList.module.css';
 
-export type Energy = 'active' | 'explore' | 'calm';
-
-export interface ActivityView {
-  id: string;
-  title: string;
-  body: string;
-  energy: Energy;
-  minutes: number | null;
-}
-
 /**
- * Три энергии — в порядке окна бодрствования: проснулся — подвигаться,
- * середина — поиграть, ближе ко сну — спокойное. Цвет всегда идёт вместе
- * со значком и подписью, никогда не один.
+ * Занятия группы — разделами, как у Виктории в её списке: «👀 Зрение»,
+ * «💦 Вода», «🧠 Причина → следствие». Кнопки сверху — быстрый переход к
+ * одному разделу, когда мама уже знает, чего хочет (например, воду перед
+ * купанием). Пункт читается так же, как в её PDF: «**Название** — описание».
  */
-export const ENERGY: Record<Energy, { label: string; when: string; Icon: typeof IconBolt }> = {
-  active: { label: 'Подвигаться', when: 'в начале', Icon: IconBolt },
-  explore: { label: 'Поиграть', when: 'в середине', Icon: IconBlocks },
-  calm: { label: 'Спокойно', when: 'перед сном', Icon: IconMoon },
-};
-
-const ORDER: Energy[] = ['active', 'explore', 'calm'];
-
-export function ActivityList({ items }: { items: ActivityView[] }) {
-  const [filter, setFilter] = useState<Energy | null>(null);
-  const shown = filter ? items.filter((item) => item.energy === filter) : items;
-  const count = (energy: Energy) => items.filter((item) => item.energy === energy).length;
+export function ActivityList({ sections }: { sections: ActivitySection[] }) {
+  const [only, setOnly] = useState<number | null>(null);
+  const shown = only === null ? sections.map((section, index) => ({ section, index })) : [{ section: sections[only], index: only }];
 
   return (
     <>
-      {/* Подсказка и фильтр одновременно: три шага окна бодрствования. */}
-      <div className={styles.flow} role="group" aria-label="Что подходит сейчас">
-        {ORDER.map((energy) => {
-          const { label, when, Icon } = ENERGY[energy];
-          const on = filter === energy;
-          return (
-            <button
-              key={energy}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setFilter(on ? null : energy)}
-              className={`${styles.step} ${styles[energy]} ${on ? styles.stepOn : ''} ${
-                filter && !on ? styles.stepOff : ''
-              }`}
-            >
-              <span className={styles.stepIcon} aria-hidden="true">
-                <Icon size={18} />
-              </span>
-              <span className={styles.stepLabel}>{label}</span>
-              <span className={styles.stepWhen}>
-                {when} · {count(energy)}
-              </span>
-            </button>
-          );
-        })}
+      <div className={styles.chips} role="group" aria-label="Раздел">
+        <button
+          type="button"
+          aria-pressed={only === null}
+          className={`${styles.chip} ${only === null ? styles.chipOn : ''}`}
+          onClick={() => setOnly(null)}
+        >
+          Все
+        </button>
+        {sections.map((section, index) => (
+          <button
+            key={section.title}
+            type="button"
+            aria-pressed={only === index}
+            className={`${styles.chip} ${only === index ? styles.chipOn : ''}`}
+            onClick={() => setOnly(only === index ? null : index)}
+          >
+            {section.title}
+          </button>
+        ))}
       </div>
 
-      {filter && (
-        <button type="button" className={styles.reset} onClick={() => setFilter(null)}>
-          Показать все {items.length}
-        </button>
-      )}
-
-      <ul className={styles.list}>
-        {shown.map((item) => {
-          const { label, Icon } = ENERGY[item.energy];
-          return (
-            <li key={item.id} className={`${styles.card} ${styles[item.energy]}`}>
-              <div className={styles.meta}>
-                <span className={styles.badge}>
-                  <Icon size={14} />
-                  {label}
-                </span>
-                {item.minutes !== null && <span className={styles.minutes}>≈ {item.minutes} мин</span>}
-              </div>
-              <h2>{item.title}</h2>
-              <p>{item.body}</p>
-            </li>
-          );
-        })}
-      </ul>
+      <div className={styles.sections}>
+        {shown.map(({ section, index }) => (
+          <section key={index} className={styles.section} aria-labelledby={`section-${index}`}>
+            <h3 id={`section-${index}`} className={styles.title}>
+              {section.title}
+            </h3>
+            {section.note && <p className={styles.note}>{section.note}</p>}
+            <ul className={styles.items}>
+              {section.items.map((item, i) => (
+                <li key={i} className={styles.item}>
+                  {item.title ? (
+                    <>
+                      <b>{item.title}</b> — {item.body}
+                    </>
+                  ) : (
+                    item.body
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
     </>
   );
 }

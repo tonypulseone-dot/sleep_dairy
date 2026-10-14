@@ -347,7 +347,7 @@ fi
 bold "7/7 · Наполнение"
 run() { docker compose exec -T app node "$@" </dev/null >>"$LOG" 2>&1; }
 run runtime/seed-norms.cjs      && ok "Таблица режимов загружена"            || warn "Таблица режимов не загрузилась, см. $LOG"
-run runtime/seed-activities.cjs && ok "Активности загружены (черновик)"      || warn "Активности не загрузились, см. $LOG"
+run runtime/seed-activities.cjs && ok "Занятия по возрастам загружены"      || warn "Занятия не загрузились, см. $LOG"
 run runtime/seed-consultant.cjs "$C_EMAIL" "$C_PASS" "$C_NAME" "$C_SLUG" \
   && ok "Кабинет для «$C_NAME» заведён" \
   || die "Не получилось завести кабинет консультанта, см. $LOG"

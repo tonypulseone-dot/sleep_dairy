@@ -85,6 +85,20 @@
       "when": 1790504126204,
       "tag": "0011_night_belongs_to_morning",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792007397315,
+      "tag": "0012_drop_old_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792007407596,
+      "tag": "0013_activity_groups",
+      "breakpoints": true
     }
   ]
 }

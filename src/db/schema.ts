@@ -28,7 +28,6 @@ export const childSex = pgEnum('child_sex', ['boy', 'girl']);
  * Сколько сил просит занятие. По методу Виктории активное — в начале
  * бодрствования, спокойное — ближе ко сну; так мама и выбирает.
  */
-export const activityEnergy = pgEnum('activity_energy', ['active', 'explore', 'calm']);
 export const themePref = pgEnum('theme_pref', ['auto', 'light', 'dark']);
 export const plan = pgEnum('plan', ['trial', 'practice', 'flow']);
 export const showcaseStatus = pgEnum('showcase_status', ['hidden', 'pending', 'published', 'rejected']);
@@ -330,21 +329,46 @@ export const rhythmNorms = pgTable(
   (table) => [index('rhythm_norms_age_idx').on(table.ageMonthsFrom, table.ageMonthsTo)],
 );
 
-/** Чем занять ребёнка в бодрствование — мамы принимают скуку за усталость. */
-export const activities = pgTable(
-  'activities',
+/**
+ * Чем занять малыша в бодрствование — список Виктории (её PDF «Занятия по
+ * возрастам»), по возрастным группам. Внутри группы — разделы как у неё
+ * («👀 Зрение», «💦 Вода», …) и пункты: «Коробка с фактурами — по очереди
+ * давать потрогать…». Это цельный текст консультанта, а не набор записей,
+ * поэтому группа хранится одной строкой: разделы и пункты — в JSON.
+ * Загружается скриптом scripts/seed-activities.ts.
+ */
+export interface ActivityItem {
+  /** Название занятия, если оно есть: «Коробка с фактурами». */
+  title?: string;
+  /** Описание или вся фраза, если названия нет. */
+  body: string;
+}
+
+export interface ActivitySection {
+  /** «👀 Зрение» — как у Виктории, со значком. */
+  title: string;
+  /** Пояснение к разделу, если есть. */
+  note?: string;
+  items: ActivityItem[];
+}
+
+export const activityGroups = pgTable(
+  'activity_groups',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    /** Порядок групп от младших к старшим. */
+    position: smallint('position').notNull(),
+    /** «4–6 месяцев» — как в названии у Виктории. */
+    title: text('title').notNull(),
+    /** Для какого возраста, полных месяцев: от (включительно) и до (не включая). */
     ageMonthsFrom: smallint('age_months_from').notNull(),
     ageMonthsTo: smallint('age_months_to').notNull(),
-    title: text('title').notNull(),
-    body: text('body').notNull(),
-    energy: activityEnergy('energy').notNull().default('explore'),
-    /** Сколько обычно длится, минут — чтобы прикинуть под окно бодрствования. */
-    minutes: smallint('minutes'),
+    /** Вступление к группе, если есть. */
+    intro: text('intro'),
+    sections: jsonb('sections').$type<ActivitySection[]>().notNull(),
     published: boolean('published').notNull().default(true),
   },
-  (table) => [index('activities_age_idx').on(table.ageMonthsFrom, table.ageMonthsTo)],
+  (table) => [index('activity_groups_age_idx').on(table.ageMonthsFrom, table.ageMonthsTo)],
 );
 
 export type Consultant = typeof consultants.$inferSelect;
