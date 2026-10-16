@@ -340,6 +340,11 @@ export const rhythmNorms = pgTable(
 export interface ActivityItem {
   /** Название занятия, если оно есть: «Коробка с фактурами». */
   title?: string;
+  /**
+   * Что стоит между названием и описанием — как у Виктории в тексте:
+   * «Коробка с фактурами — по очереди…» или «Мяч: катать…». По умолчанию тире.
+   */
+  sep?: ':';
   /** Описание или вся фраза, если названия нет. */
   body: string;
 }
@@ -365,6 +370,8 @@ export const activityGroups = pgTable(
     ageMonthsTo: smallint('age_months_to').notNull(),
     /** Вступление к группе, если есть. */
     intro: text('intro'),
+    /** Совет в конце группы, если есть: «Если малыш не любит живот — это нормально…». */
+    outro: text('outro'),
     sections: jsonb('sections').$type<ActivitySection[]>().notNull(),
     published: boolean('published').notNull().default(true),
   },

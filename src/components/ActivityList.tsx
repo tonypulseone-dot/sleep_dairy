@@ -8,7 +8,8 @@ import styles from './ActivityList.module.css';
  * Занятия группы — разделами, как у Виктории в её списке: «👀 Зрение»,
  * «💦 Вода», «🧠 Причина → следствие». Кнопки сверху — быстрый переход к
  * одному разделу, когда мама уже знает, чего хочет (например, воду перед
- * купанием). Пункт читается так же, как в её PDF: «**Название** — описание».
+ * купанием). Пункт читается так же, как у неё в тексте: «**Название** — описание»
+ * или «**Название**: описание».
  */
 export function ActivityList({ sections }: { sections: ActivitySection[] }) {
   const [only, setOnly] = useState<number | null>(null);
@@ -50,7 +51,9 @@ export function ActivityList({ sections }: { sections: ActivitySection[] }) {
                 <li key={i} className={styles.item}>
                   {item.title ? (
                     <>
-                      <b>{item.title}</b> — {item.body}
+                      <b>{item.title}</b>
+                      {item.sep === ':' ? ': ' : ' — '}
+                      {item.body}
                     </>
                   ) : (
                     item.body

@@ -6,7 +6,7 @@ import { activityGroups } from '@/db/schema';
 import { TelegramBoot } from '@/components/TelegramBoot';
 import { currentChild, currentParent } from '@/lib/session';
 import { ageInMonths } from '@/lib/rhythm';
-import { pickGroup } from '@/lib/activity-groups';
+import { forAge, pickGroup } from '@/lib/activity-groups';
 import styles from './activities.module.css';
 import { BackButton } from '@/components/BackButton';
 import { ActivityList } from '@/components/ActivityList';
@@ -63,7 +63,7 @@ export default async function ActivitiesPage({ searchParams }: { searchParams: P
         <>
           <section className={styles.group} aria-labelledby="group-title">
             <h2 id="group-title" className={styles.groupTitle}>
-              Занятия для {group.title.replace('месяца', 'месяцев').replace('года', 'лет')}
+              Занятия для {forAge(group.title)}
             </h2>
             {own && !picked?.exact && (
               <p className={styles.groupNote}>
@@ -74,7 +74,7 @@ export default async function ActivitiesPage({ searchParams }: { searchParams: P
               <p className={styles.groupNote}>
                 Это занятия для другого возраста.{' '}
                 <Link href="/activities" className={styles.backLink}>
-                  Вернуться к {picked.group.title.replace('месяца', 'месяцам').replace('месяцев', 'месяцам').replace('года', 'годам')}
+                  Вернуться к занятиям для {forAge(picked.group.title)}
                 </Link>
               </p>
             )}
@@ -82,6 +82,9 @@ export default async function ActivitiesPage({ searchParams }: { searchParams: P
           </section>
 
           <ActivityList key={group.id} sections={group.sections} />
+
+          {/* Совет Виктории в конце группы: «Если малыш не любит живот — это нормально…» */}
+          {group.outro && <p className={styles.outro}>{group.outro}</p>}
 
           <nav className={styles.others} aria-label="Другой возраст">
             <span className={styles.othersLabel}>Другой возраст</span>

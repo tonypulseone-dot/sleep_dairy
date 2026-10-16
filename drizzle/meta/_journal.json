@@ -99,6 +99,13 @@
       "when": 1792007407596,
       "tag": "0013_activity_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792192767578,
+      "tag": "0014_activity_outro",
+      "breakpoints": true
     }
   ]
 }

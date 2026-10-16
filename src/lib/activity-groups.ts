@@ -19,3 +19,14 @@ export function pickGroup<T extends AgeRange>(groups: T[], months: number): { gr
   for (const group of sorted) if (distance(group) < distance(best)) best = group;
   return { group: best, exact: distance(best) === 0 };
 }
+
+/**
+ * «Занятия для …»: название группы в родительном падеже.
+ * «0–1 месяц» → «0–1 месяца», «1–2 месяца» → «1–2 месяцев», «2–3 года» → «2–3 лет».
+ */
+export function forAge(title: string): string {
+  return title
+    .replace(/месяца$/, 'месяцев')
+    .replace(/месяц$/, 'месяца')
+    .replace(/года$/, 'лет');
+}

@@ -28,6 +28,12 @@
 .groupTitle { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
 .groupNote { margin: 0; font-size: 13px; color: var(--ink-3); line-height: 1.45; }
 .backLink { color: var(--play-ink); text-underline-offset: 3px; }
+/* Совет в конце группы — тем же спокойным фиолетовым, что вступление. */
+.outro {
+  margin: 0; padding: 12px 14px;
+  border-radius: var(--radius-sm); background: var(--play-soft); color: var(--play-ink);
+  font-size: 14.5px; line-height: 1.5;
+}
 .intro {
   margin: 2px 0 0; padding: 12px 14px;
   border-radius: var(--radius-sm); background: var(--play-soft); color: var(--play-ink);

@@ -1,0 +1,1 @@
+ALTER TABLE "activity_groups" ADD COLUMN "outro" text;
