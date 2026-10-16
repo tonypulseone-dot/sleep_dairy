@@ -65,11 +65,6 @@ export default async function ActivitiesPage({ searchParams }: { searchParams: P
             <h2 id="group-title" className={styles.groupTitle}>
               Занятия для {forAge(group.title)}
             </h2>
-            {own && !picked?.exact && (
-              <p className={styles.groupNote}>
-                Отдельного списка для {months} мес пока нет — это ближайший по возрасту.
-              </p>
-            )}
             {!own && picked && (
               <p className={styles.groupNote}>
                 Это занятия для другого возраста.{' '}
