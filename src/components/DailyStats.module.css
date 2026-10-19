@@ -11,7 +11,7 @@
   color: var(--ink-2); font-size: 14px; line-height: 1.45;
 }
 
-/* Цвет линии — по цифре суток; текст всегда цветами текста. */
+/* Цвет метки у названия — по цифре суток; текст всегда цветами текста. */
 .metric { --metric: var(--ink-2); --col: 44px; }
 .metric[data-metric='day'] { --metric: var(--day); }
 .metric[data-metric='night'] { --metric: var(--night); }
@@ -31,7 +31,7 @@
   margin: 0; display: flex; align-items: center; gap: 8px;
   font-size: 16px; font-weight: 600; color: var(--ink);
 }
-/* Метка-линия у названия — тот же цвет, что у линии графика. */
+/* Метка у названия — цвет этой цифры суток, как в дневнике. */
 .key { width: 14px; height: 3px; border-radius: 2px; background: var(--metric); flex: none; }
 .note { font-size: 12.5px; color: var(--ink-3); }
 .readout { margin: 4px 0 0; min-height: 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
@@ -44,22 +44,6 @@
   scrollbar-width: thin;
 }
 .strip { display: grid; min-width: 100%; }
-
-.plot { grid-column: 1 / -1; position: relative; height: 64px; margin-bottom: 4px; }
-.svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.line { fill: none; stroke: var(--metric); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
-.area { fill: var(--metric); opacity: .1; stroke: none; }
-.dot {
-  position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px;
-  border-radius: 50%; background: var(--metric);
-  box-shadow: 0 0 0 2px var(--surface);
-  pointer-events: none;
-}
-.dotOn { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
-.crosshair {
-  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px;
-  background: var(--line); pointer-events: none;
-}
 
 /* Столбик дня: день недели, число, значение, разница с предыдущим днём. */
 .col {
