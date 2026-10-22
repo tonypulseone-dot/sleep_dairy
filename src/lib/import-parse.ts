@@ -173,6 +173,25 @@ export function spanMinutes(start: string, end: string): number {
   return (toMinutes(end) - toMinutes(start) + 1440) % 1440 || 1440;
 }
 
+/**
+ * Нейросеть, переписывая скриншот, иногда путает одну цифру: «08:55 - 09:50»
+ * при длительности «1 ч 15 м» на самом деле 08:35. Если ровно один край
+ * отличается от «другой край ± длительность» одной цифрой — это опечатка
+ * чтения, исправляем. Два кандидата или больше одной цифры — не трогаем.
+ */
+export function fixMisreadDigit(start: string, end: string, duration: number): { start: string; end: string } | null {
+  const clock = (minutes: number) => {
+    const value = ((minutes % 1440) + 1440) % 1440;
+    return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+  };
+  const oneDigit = (a: string, b: string) => [...a].filter((char, index) => char !== b[index]).length === 1;
+  const options = [
+    { start: clock(toMinutes(end) - duration), end },
+    { start, end: clock(toMinutes(start) + duration) },
+  ].filter((option) => oneDigit(option.start + option.end, start + end));
+  return options.length === 1 ? options[0] : null;
+}
+
 /** Вытаскивает JSON из ответа модели: она иногда оборачивает его в ```json или добавляет слова. */
 function extractJson(content: string): unknown {
   const cleaned = content.replace(/```(?:json)?/gi, '');
@@ -262,7 +281,9 @@ export function parseRecognized(content: string, today: string): Recognized {
           else if (date > screenDate) date = screenDate;
         }
       } else {
-        doubtful = true;
+        const fixed = fixMisreadDigit(start, end, duration);
+        if (fixed) ({ start, end } = fixed);
+        else doubtful = true;
       }
     }
 

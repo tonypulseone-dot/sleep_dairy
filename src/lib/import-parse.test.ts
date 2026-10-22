@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeDate, normalizeTime, parseDuration, parseRecognized, screenshotPrompt } from './import-parse';
+import { fixMisreadDigit, normalizeDate, normalizeTime, parseDuration, parseRecognized, screenshotPrompt } from './import-parse';
 
 const today = '2026-09-24';
 
@@ -238,4 +238,12 @@ test('12-часовое время: латиница, кириллица, с т�
   assert.equal(normalizeTime('3:53 РМ'), '15:53');
   assert.equal(normalizeTime('7:30 p.m.'), '19:30');
   assert.equal(normalizeTime('13:05 PM'), null);
+});
+
+test('одна неверно прочитанная цифра: исправляем, только если вариант один', () => {
+  assert.deepEqual(fixMisreadDigit('08:55', '09:50', 75), { start: '08:35', end: '09:50' });
+  // Ошибиться могла и цифра начала (13:30), и цифра конца (14:15) — не угадываем.
+  assert.equal(fixMisreadDigit('13:20', '14:25', 55), null);
+  assert.deepEqual(fixMisreadDigit('09:40', '11:25', 45), { start: '09:40', end: '10:25' });
+  assert.equal(fixMisreadDigit('08:10', '09:50', 75), null);
 });

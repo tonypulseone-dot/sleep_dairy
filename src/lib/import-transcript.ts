@@ -24,6 +24,7 @@
  */
 import {
   finalizeSleeps,
+  fixMisreadDigit,
   HALF_DAY,
   halfOf,
   normalizeTime,
@@ -274,7 +275,14 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
       // Длительность рядом (справа в строке или в следующей строке карточки) —
       // проверка, что цифры прочитаны верно: «08:55 - 09:50» при «1 ч 15 м» — ошибка.
       const nearby = durationsNear(lines, lineIndex, times[i + 1].end);
-      const { start, end, unsure } = resolveRange(times[i], times[i + 1], nearby, twelveHour);
+      const resolved = resolveRange(times[i], times[i + 1], nearby, twelveHour);
+      let { start, end } = resolved;
+      const { unsure } = resolved;
+      // Одна цифра прочитана неверно («08:55» вместо «08:35») — длительность подскажет какая.
+      if (!nearby.some((value) => Math.abs(value - spanMinutes(start, end)) <= 3)) {
+        const fixed = nearby.map((value) => fixMisreadDigit(start, end, value)).find((option) => option !== null);
+        if (fixed) ({ start, end } = fixed);
+      }
       const span = spanMinutes(start, end);
       const matches = nearby.find((value) => Math.abs(value - span) <= 3);
       ranged.push({
