@@ -229,3 +229,13 @@ test('если нейросеть сама поставила ночи Baby Soma
   );
   assert.equal(result.sleeps.find((sleep) => sleep.start === '20:49')?.date, '2026-08-07');
 });
+
+test('12-часовое время: латиница, кириллица, с точками', () => {
+  assert.equal(normalizeTime('9:15 PM'), '21:15');
+  assert.equal(normalizeTime('12:12 AM'), '00:12');
+  assert.equal(normalizeTime('12:07 PM'), '12:07');
+  assert.equal(normalizeTime('1:04 АМ'), '01:04');
+  assert.equal(normalizeTime('3:53 РМ'), '15:53');
+  assert.equal(normalizeTime('7:30 p.m.'), '19:30');
+  assert.equal(normalizeTime('13:05 PM'), null);
+});

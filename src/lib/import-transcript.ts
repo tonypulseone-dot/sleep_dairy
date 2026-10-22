@@ -8,7 +8,10 @@
  * (transcribePrompt), а сны собирает этот код по строгим правилам:
  *
  *  - строка с диапазоном «20:35 - 06:48» — готовый сон, дата — из
- *    ближайшего заголовка выше («12 августа 2026 г.», «11.08.2026», «Вчера»);
+ *    ближайшего заголовка выше («12 августа 2026 г.», «11.08.2026»,
+ *    «10.10.26», «Вчера»). В отчётах с AM/PM пометка часто стоит только
+ *    после второго времени («1:47—3:00 PM») — она относится к обоим;
+ *    сомнение решает длительность в той же строке;
  *  - лента без диапазонов (время над и под плашкой сна) — пары соседних
  *    времён; сон — та пара, разница которой совпадает с длительностью в
  *    плашке, остальные пары — бодрствование. Так неважно даже, если модель
@@ -19,7 +22,17 @@
  * Не справились правила (время есть, а снов не собрали) — возвращаем null,
  * и текст разбирает нейросеть (textPrompt), уже без картинки.
  */
-import { finalizeSleeps, normalizeTime, parseDuration, spanMinutes, type Recognized, type RecognizedSleep, type ScreenKind } from './import-parse';
+import {
+  finalizeSleeps,
+  HALF_DAY,
+  halfOf,
+  normalizeTime,
+  parseDuration,
+  spanMinutes,
+  type Recognized,
+  type RecognizedSleep,
+  type ScreenKind,
+} from './import-parse';
 
 export function transcribePrompt(): string {
   return `Перепиши весь текст с этого скриншота построчно, сверху вниз, точно как написано. Ничего не пропускай, не объясняй и не пересчитывай.
@@ -29,7 +42,9 @@ export function transcribePrompt(): string {
 - Не пропускай ни одного времени (вида 07:02, 21:10) — даже если оно стоит отдельно или мелко.
 - Если строка находится внутри цветной плашки или карточки, начни её с [ПЛАШКА].
 - Значки (луна, солнце) пиши словами: [луна], [солнце].
-- Цифры и время переписывай в точности, со всеми знаками («07:02, 13 авг», «9 часов 52 минуты»).`;
+- Цифры и время переписывай в точности, со всеми знаками («07:02, 13 авг», «9 часов 52 минуты»).
+- Время с AM/PM переписывай вместе с AM/PM ровно там, где оно стоит, и НЕ переводи в 24 часа: «1:47—3:00 PM», «11:09 AM—12:21 PM», «10:34 PM – 1:04 AM».
+- Таблицу переписывай по строкам: дата, время, длительность и комментарий одной строки — в одну строку через « | » («8:35—9:36 AM | 1 ч 1 мин | д1»).`;
 }
 
 const MONTHS: [RegExp, number][] = [
@@ -64,6 +79,11 @@ export function datesIn(line: string, today: string, near: string | null = null)
     const date = iso(Number(match[3]), Number(match[2]), Number(match[1]), today);
     if (date) found.push({ at: match.index ?? 0, date, hasYear: true });
   }
+  // Год двумя цифрами — «10.10.26», как в выгрузках-отчётах.
+  for (const match of lower.matchAll(/(?<![\d.])(\d{1,2})\.(\d{1,2})\.(\d{2})(?![\d.])/g)) {
+    const date = iso(2000 + Number(match[3]), Number(match[2]), Number(match[1]), today);
+    if (date) found.push({ at: match.index ?? 0, date, hasYear: true });
+  }
   for (const match of lower.matchAll(/(\d{1,2})\s+([а-яё]{3,9})\.?(?:\s+(\d{4}))?/g)) {
     const month = MONTHS.find(([pattern]) => pattern.test(match[2]))?.[1];
     if (!month) continue;
@@ -89,14 +109,80 @@ export function datesIn(line: string, today: string, near: string | null = null)
   return found.sort((a, b) => a.at - b.at).map(({ date, hasYear }) => ({ date, hasYear }));
 }
 
-/** Времена в строке: «07:02», «9.15», «9:15 PM»; даты «11.08.2026» не считаются. */
-function timesIn(line: string): { value: string; at: number; end: number }[] {
-  const out: { value: string; at: number; end: number }[] = [];
-  for (const match of line.matchAll(/(?<![\d.:])(\d{1,2})([:.])(\d{2})(?![\d.:])(\s*[AaPp][Mm])?/g)) {
-    const value = normalizeTime(`${match[1]}:${match[3]}${match[4] ?? ''}`);
-    if (value) out.push({ value, at: match.index ?? 0, end: (match.index ?? 0) + match[0].length });
+interface TimeMark {
+  /** Время в 24 часа — по своей пометке AM/PM, а без неё — как написано. */
+  value: string;
+  at: number;
+  end: number;
+  hours: number;
+  minutes: number;
+  /** AM/PM у этого времени; null — пометки нет. */
+  half: 'am' | 'pm' | null;
+}
+
+const TIME = new RegExp(String.raw`(?<![\d.:])(\d{1,2})([:.])(\d{2})(?![\d.:])(?:\s*(${HALF_DAY}))?`, 'g');
+
+/** Времена в строке: «07:02», «9.15», «9:15 PM», «9:15 РМ»; даты «11.08.2026» не считаются. */
+function timesIn(line: string): TimeMark[] {
+  const out: TimeMark[] = [];
+  for (const match of line.matchAll(TIME)) {
+    const half = halfOf(match[4]);
+    const value = normalizeTime(`${match[1]}:${match[3]}${half ? ` ${half}` : ''}`);
+    if (!value) continue;
+    const at = match.index ?? 0;
+    out.push({ value, at, end: at + match[0].length, hours: Number(match[1]), minutes: Number(match[3]), half });
   }
   return out;
+}
+
+/** То же время с другой пометкой AM/PM; null — время уже 24-часовое («13:05», «0:30»). */
+function withHalf(time: TimeMark, half: 'am' | 'pm'): string | null {
+  return normalizeTime(`${time.hours}:${String(time.minutes).padStart(2, '0')} ${half}`);
+}
+
+const opposite = (half: 'am' | 'pm') => (half === 'am' ? 'pm' : 'am');
+
+/**
+ * Начало и конец диапазона в 24 часа. Пометка AM/PM у одного края относится
+ * и к другому («1:47—3:00 PM» — 13:47–15:00), но не всегда: «11:30—12:15 PM»
+ * начинается до полудня. Выбираем вариант, который сходится с длительностью
+ * в строке, а без неё — самый короткий сон: сон в 13 часов «днём» не бывает.
+ * В отчёте с AM/PM время без пометок у обоих краев — пометку потеряли при
+ * переписывании: если прочитанное не сходится с длительностью, пробуем +12 часов,
+ * но утро это или вечер, всё равно не узнать — такой сон помечаем (`unsure`).
+ */
+function resolveRange(
+  a: TimeMark,
+  b: TimeMark,
+  nearby: number[],
+  twelveHour: boolean,
+): { start: string; end: string; unsure?: boolean } {
+  const fits = (start: string, end: string) => nearby.some((value) => Math.abs(value - spanMinutes(start, end)) <= 3);
+  const pick = (options: { start: string; end: string }[]) =>
+    options.find((option) => fits(option.start, option.end)) ??
+    [...options].sort((x, y) => spanMinutes(x.start, x.end) - spanMinutes(y.start, y.end))[0];
+  const variants = (time: TimeMark, half: 'am' | 'pm') =>
+    [withHalf(time, half), withHalf(time, opposite(half))].filter((value): value is string => value !== null);
+
+  if (!a.half && b.half) {
+    const options = variants(a, b.half).map((start) => ({ start, end: b.value }));
+    if (options.length > 0) return pick(options);
+  }
+  if (a.half && !b.half) {
+    const options = variants(b, a.half).map((end) => ({ start: a.value, end }));
+    if (options.length > 0) return pick(options);
+  }
+  const lost = !a.half && !b.half && twelveHour && a.hours <= 12 && b.hours <= 12;
+  if (lost && nearby.length > 0 && !fits(a.value, b.value)) {
+    const later = (time: TimeMark) => (time.hours >= 1 && time.hours <= 11 ? withHalf(time, 'pm') : null);
+    const options = [
+      { start: later(a), end: b.value },
+      { start: a.value, end: later(b) },
+    ].filter((option): option is { start: string; end: string } => option.start !== null && option.end !== null);
+    const found = options.find((option) => fits(option.start, option.end));
+    if (found) return { ...found, unsure: true };
+  }
+  return { start: a.value, end: b.value, unsure: lost };
 }
 
 const toMin = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
@@ -120,6 +206,9 @@ function durationsNear(lines: Line[], index: number, from: number): number[] {
   }
   return out;
 }
+
+/** Дата в начале строки — колонка «Дата» таблицы-отчёта. */
+const ROW_DATE = /^\s*\d{1,2}\.\d{1,2}\.\d{2,4}(?![\d.:])/;
 
 const NOT_SLEEP = /корм|бутыл|груд(?!н)|сцеж|прикорм|прогул|купан|подгуз|лекарств|бодрств|вб:/i;
 
@@ -147,6 +236,10 @@ function readLines(transcript: string, today: string): Line[] {
     // ленты «13 авг | 12 авг» — берём нижний день, вторую.
     if (dates.length > 0 && !hasTime) {
       context = dates.length > 1 && dates[0].hasYear && !dates[1].hasYear ? dates[0].date : dates[dates.length - 1].date;
+    } else if (hasTime && ROW_DATE.test(text)) {
+      // Строка таблицы-отчёта начинается с даты: «10.10.26 | 8:35—9:36 AM | 1 ч 1 мин» —
+      // это и заголовок дня для строк ниже.
+      context = datesIn(text.slice(0, timesIn(text)[0].at), today, context).at(-1)?.date ?? context;
     }
     lines.push({ text, plate, sleepMark, context });
   }
@@ -168,7 +261,8 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
     return { date: null, sleeps: [], timesVisible: false, screen: screenWithoutTimes(transcript), dropped: 0, swapped: 0 };
   }
 
-  // 1. Диапазоны «20:35 - 06:48».
+  // 1. Диапазоны «20:35 - 06:48», «1:47—3:00 PM».
+  const twelveHour = lines.some((line) => timesIn(line.text).some((time) => time.half !== null));
   const ranged: RecognizedSleep[] = [];
   lines.forEach((line, lineIndex) => {
     if (NOT_SLEEP.test(line.text)) return;
@@ -177,24 +271,31 @@ export function sleepsFromTranscript(transcript: string, today: string): Recogni
       const between = line.text.slice(times[i].end, times[i + 1].at);
       if (!/^\s*[-–—]\s*$/.test(between)) continue;
       const explicit = datesIn(line.text, today, line.context)[0]?.date ?? null;
-      const start = times[i].value;
-      const end = times[i + 1].value;
       // Длительность рядом (справа в строке или в следующей строке карточки) —
       // проверка, что цифры прочитаны верно: «08:55 - 09:50» при «1 ч 15 м» — ошибка.
       const nearby = durationsNear(lines, lineIndex, times[i + 1].end);
+      const { start, end, unsure } = resolveRange(times[i], times[i + 1], nearby, twelveHour);
       const span = spanMinutes(start, end);
       const matches = nearby.find((value) => Math.abs(value - span) <= 3);
       ranged.push({
         date: explicit ?? line.context,
         start,
         end,
-        doubtful: nearby.length > 0 && matches === undefined,
+        doubtful: (nearby.length > 0 && matches === undefined) || Boolean(unsure),
         stated: matches ?? nearby[0] ?? null,
+        ...(unsure ? { ampm: true } : {}),
       });
       i += 1;
     }
   });
-  if (ranged.length > 0) return finalizeSleeps(ranged, lines.find((line) => line.context)?.context ?? null);
+  if (ranged.length > 0) {
+    fillPageTop(ranged, lines);
+    // Страница таблицы-отчёта с одним заголовком: сны над ним — из другого дня,
+    // дату заголовка им давать нельзя. Пусть её возьмут с прошлой страницы или выберет мама.
+    const report = lines.some((line) => ROW_DATE.test(line.text));
+    const undated = ranged.some((sleep) => sleep.date === null);
+    return finalizeSleeps(ranged, report && undated ? null : (lines.find((line) => line.context)?.context ?? null));
+  }
 
   // 2. Лента: одиночные времена и длительности в плашках.
   const points: { value: string; date: string | null; context: string | null }[] = [];
@@ -318,4 +419,23 @@ function keepAlternating(all: RecognizedSleep[]): RecognizedSleep[] {
   if (hasNight(even) !== hasNight(odd)) return hasNight(even) ? even : odd;
   const total = (list: RecognizedSleep[]) => list.reduce((sum, sleep) => sum + spanMinutes(sleep.start, sleep.end), 0);
   return total(even) >= total(odd) ? even : odd;
+}
+
+/**
+ * Страница отчёта часто начинается с продолжения прошлого дня — без заголовка
+ * с датой (скриншот второй страницы PDF). Если дни ниже идут подряд по
+ * возрастанию («13.10.26», «14.10.26»), сны над первым заголовком — из
+ * предыдущего дня, по убыванию — из следующего. Заголовок один — порядок
+ * не понять, дату выберет мама.
+ */
+function fillPageTop(sleeps: RecognizedSleep[], lines: Line[]) {
+  if (!sleeps.some((sleep) => sleep.date === null)) return;
+  const headers: string[] = [];
+  for (const line of lines) if (line.context && line.context !== headers.at(-1)) headers.push(line.context);
+  if (headers.length < 2) return;
+  const ascending = headers.every((date, index) => index === 0 || date > headers[index - 1]);
+  const descending = headers.every((date, index) => index === 0 || date < headers[index - 1]);
+  if (!ascending && !descending) return;
+  const date = shift(headers[0], ascending ? -1 : 1);
+  for (const sleep of sleeps) if (sleep.date === null) sleep.date = date;
 }

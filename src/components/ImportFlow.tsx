@@ -31,11 +31,13 @@ interface Row {
   doubtful: boolean;
   /** Длительность, написанная на скриншоте. */
   stated: number | null;
+  /** В отчёте с AM/PM пометка не прочиталась — утро или вечер, решит мама. */
+  ampm: boolean;
 }
 
 interface Recognized {
   date: string | null;
-  sleeps: { date: string | null; start: string; end: string; doubtful: boolean; stated: number | null }[];
+  sleeps: { date: string | null; start: string; end: string; doubtful: boolean; stated: number | null; ampm?: boolean }[];
   timesVisible: boolean;
   screen: 'list' | 'stats' | 'chart' | 'other';
 }
@@ -152,6 +154,7 @@ export function ImportFlow({
       edited: false,
       doubtful: sleep.doubtful,
       stated: sleep.stated,
+      ampm: sleep.ampm ?? false,
     }));
     recognizedCount.current += fresh.length;
     setRows((current) => {
@@ -169,13 +172,20 @@ export function ImportFlow({
     setPhase('working');
     setProgress({ done: 0, total: list.length });
 
+    // Последний день предыдущего скриншота: страница отчёта может начинаться с
+    // продолжения этого дня без заголовка — такие сны получают его дату, если
+    // страницы идут по порядку (дни на этой странице — позже).
+    let lastDate = null as string | null;
     for (const [index, file] of list.entries()) {
       try {
         const body = new FormData();
         const image = await prepareImage(file);
         body.append('image', image, 'screenshot.jpg');
         const found = await recognize(body);
-        const count = addRecognized(found, null);
+        const dated = found.sleeps.map((sleep) => sleep.date).filter((date): date is string => date !== null).sort();
+        const carry: string | null = lastDate && (dated.length === 0 || lastDate <= dated[0]) ? lastDate : null;
+        const count = addRecognized(found, carry);
+        lastDate = dated.at(-1) ?? found.date ?? carry ?? lastDate;
         if (count === 0) {
           const number = `Скриншот ${index + 1}`;
           setNotes((current) => [
@@ -508,7 +518,9 @@ export function ImportFlow({
                         </button>
                         {row.doubtful && editing !== row.id && (
                           <p className={styles.doubt}>
-                            {row.stated
+                            {row.ampm
+                              ? 'На скриншоте не прочиталось AM или PM — проверьте, утро это или вечер'
+                              : row.stated
                               ? `На скриншоте сон длится ${Math.floor(row.stated / 60)}:${String(row.stated % 60).padStart(2, '0')}, а по времени — ${spanText(row.start, row.end)}. Сверьте время`
                               : 'Время не сходится с длительностью на скриншоте — сверьте'}
                           </p>
