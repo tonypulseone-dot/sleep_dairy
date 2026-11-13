@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { unwrap } from '@/lib/action-result';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -60,6 +61,7 @@ export function ProLogin() {
         <button type="submit" className={styles.primary} disabled={pending}>
           {pending ? 'Входим…' : 'Войти'}
         </button>
+      <Link href="/pro/register" className={styles.linkish}>Создать аккаунт консультанта</Link>
       </form>
     </main>
   );

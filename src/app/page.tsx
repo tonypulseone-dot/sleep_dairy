@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { accessGrants, rhythmNorms, sleeps } from '@/db/schema';
-import { IconBottle, IconChart, IconForward, IconImport, IconSettings, IconToy } from '@/components/Icons';
+import { IconBottle, IconChart, IconForward, IconImport, IconSettings, IconToy, IconUser } from '@/components/Icons';
 import { gigachatConfigured } from '@/lib/gigachat';
 import { childWords } from '@/lib/words';
 import { SexPrompt } from '@/components/SexPrompt';
@@ -304,6 +304,13 @@ export default async function Home() {
           <span className={styles.tileText}>
             <span className={styles.tileTitle}>Чем заняться</span>
             <span className={styles.tileSub}>игры по возрасту</span>
+          </span>
+        </Link>
+        <Link href="/consultants" className={styles.tile}>
+          <span className={styles.tileIcon} aria-hidden="true"><IconUser /></span>
+          <span className={styles.tileText}>
+            <span className={styles.tileTitle}>Консультанты</span>
+            <span className={styles.tileSub}>подход, услуги и цены</span>
           </span>
         </Link>
       </nav>

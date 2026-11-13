@@ -1,3 +1,4 @@
+import type { ConsultantProfile } from '@/lib/showcase';
 import {
   boolean,
   date,
@@ -42,6 +43,8 @@ export const consultants = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     email: text('email').notNull(),
+    isModerator: boolean('is_moderator').notNull().default(false),
+    services: jsonb('services').$type<ConsultantProfile['services']>().notNull().default([]),
     /** scrypt: соль и хеш. Пароль в открытом виде не хранится нигде. */
     passwordHash: text('password_hash').notNull(),
     name: text('name').notNull(),
@@ -384,3 +387,13 @@ export type Child = typeof children.$inferSelect;
 export type Sleep = typeof sleeps.$inferSelect;
 export type Feeding = typeof feedings.$inferSelect;
 export type AccessGrant = typeof accessGrants.$inferSelect;
+
+/** Черновик хранится отдельно от опубликованной анкеты. */
+export const consultantProfiles = pgTable('consultant_profiles', {
+  consultantId: uuid('consultant_id').primaryKey().references(() => consultants.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').$type<ConsultantProfile>().notNull(),
+  status: text('status').notNull().default('draft'),
+  revision: integer('revision').notNull().default(1),
+  note: text('note'),
+  updatedAt: timestamp('updated_at', {withTimezone:true}).notNull().defaultNow(),
+});

@@ -1,0 +1,136 @@
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 22px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+  margin: 8px 0;
+}
+.controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.controls input,
+.controls button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.controls button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.scroll {
+  overflow: auto;
+  max-height: 72vh;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.table th,
+.table td {
+  padding: 12px 16px;
+  white-space: nowrap;
+  border-right: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  text-align: right;
+  background: var(--surface);
+}
+.table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left;
+  min-width: 195px;
+  white-space: normal;
+}
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-2);
+}
+.table thead th:first-child {
+  z-index: 4;
+}
+.table thead small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  margin-top: 5px;
+  color: var(--ink-2);
+}
+.table tr[data-tone="day"] > * {
+  background: var(--day-soft);
+  color: var(--day-ink);
+}
+.table tr[data-tone="night"] > * {
+  background: var(--night-soft);
+  color: var(--night-ink);
+}
+.table tr[data-tone="wake"] > * {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.table tr[data-tone="total"] > * {
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+.summary {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.summary p {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.summary strong {
+  font-size: 25px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.note {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.6;
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .table th,
+  .table td {
+    padding: 10px;
+    font-size: 12px;
+  }
+  .table th:first-child {
+    min-width: 145px;
+    max-width: 145px;
+  }
+  .controls input {
+    max-width: 155px;
+  }
+}

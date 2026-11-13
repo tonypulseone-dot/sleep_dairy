@@ -167,6 +167,8 @@ export default async function ProHome() {
         <h1>Кабинет</h1>
         <div className={styles.who}>
           <span>{consultant.name}</span>
+          <Link href="/pro/profile" className={styles.linkish}>Моя анкета</Link>
+          {consultant.isModerator && <Link href="/pro/moderation" className={styles.linkish}>Проверка анкет</Link>}
           <form action={proLogout}>
             <button type="submit" className={styles.linkish}>
               Выйти

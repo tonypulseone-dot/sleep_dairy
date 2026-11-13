@@ -81,6 +81,7 @@ export function ConsultantList({ grants }: { grants: GrantView[] }) {
         <BackButton href="/" className={styles.back} label="Назад" />
         <h1>Мой консультант</h1>
       </header>
+      <Link href="/consultants" className={styles.skip}>Все консультанты</Link>
 
       {grants.length === 0 ? (
         <p className={styles.empty}>
